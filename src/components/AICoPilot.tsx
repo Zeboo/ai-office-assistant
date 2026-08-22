@@ -1,3 +1,4 @@
+
 import { useState, type KeyboardEvent } from "react";
 import {
   Bot,
@@ -6,6 +7,7 @@ import {
   User,
   Clock3,
   Trash2,
+  Loader2,
 } from "lucide-react";
 
 import { colors } from "../theme/colors";
@@ -23,33 +25,42 @@ type AICopilotProps = {
 
 function AICopilot({ initialMessage }: AICopilotProps) {
   const [input, setInput] = useState("");
-const [messages, setMessages] = useState<Message[]>(() => {
-  const initialMessages: Message[] = [
-    {
-      id: 1,
-      role: "ai",
-      text: "Hello Palwasha! I'm your AI Co-Pilot. How can I help you today?",
-      time: "Now",
-    },
-  ];
 
-  if (initialMessage && initialMessage.trim() !== "") {
-    initialMessages.push({
-      id: 2,
-      role: "user",
-      text: initialMessage,
-      time: "Now",
-    });
-  }
+  const [isThinking, setIsThinking] = useState(false);
 
-  return initialMessages;
-});
-  
+  const [messages, setMessages] = useState<Message[]>(() => {
+    const initialMessages: Message[] = [
+      {
+        id: 1,
+        role: "ai",
+        text: "Hello Palwasha! I'm your AI Co-Pilot. How can I help you today?",
+        time: "Now",
+      },
+    ];
 
-  const sendMessage = () => {
-    const messageText = input.trim();
+    if (initialMessage && initialMessage.trim() !== "") {
+      initialMessages.push({
+        id: 2,
+        role: "user",
+        text: initialMessage,
+        time: "Now",
+      });
 
-    if (messageText === "") {
+      initialMessages.push({
+        id: 3,
+        role: "ai",
+        text: getAIResponse(initialMessage),
+        time: "Now",
+      });
+    }
+
+    return initialMessages;
+  });
+
+  const sendMessage = (customMessage?: string) => {
+    const messageText = (customMessage ?? input).trim();
+
+    if (!messageText || isThinking) {
       return;
     }
 
@@ -57,7 +68,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
       id: Date.now(),
       role: "user",
       text: messageText,
-      time: "Now",
+      time: getCurrentTime(),
     };
 
     setMessages((oldMessages) => [
@@ -66,19 +77,22 @@ const [messages, setMessages] = useState<Message[]>(() => {
     ]);
 
     setInput("");
+    setIsThinking(true);
 
-    setTimeout(() => {
+    window.setTimeout(() => {
       const aiMessage: Message = {
         id: Date.now() + 1,
         role: "ai",
         text: getAIResponse(messageText),
-        time: "Now",
+        time: getCurrentTime(),
       };
 
       setMessages((oldMessages) => [
         ...oldMessages,
         aiMessage,
       ]);
+
+      setIsThinking(false);
     }, 700);
   };
 
@@ -102,10 +116,11 @@ const [messages, setMessages] = useState<Message[]>(() => {
     ]);
 
     setInput("");
+    setIsThinking(false);
   };
 
-  const useSuggestion = (text: string) => {
-    setInput(text);
+  const runSuggestion = (text: string) => {
+    sendMessage(text);
   };
 
   return (
@@ -149,7 +164,7 @@ const [messages, setMessages] = useState<Message[]>(() => {
         <button
           type="button"
           onClick={clearChat}
-          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold"
+          className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold transition-opacity hover:opacity-80"
           style={{
             backgroundColor: colors.surface,
             color: colors.textMuted,
@@ -258,112 +273,119 @@ const [messages, setMessages] = useState<Message[]>(() => {
         {/* CHAT MESSAGES */}
 
         <div className="flex-1 overflow-y-auto p-6">
-          {messages.length === 0 ? (
-            <div className="flex h-full items-center justify-center">
-              <div className="text-center">
+          <div className="space-y-5">
+            {messages.map((message) => {
+              const isUser = message.role === "user";
+
+              return (
                 <div
-                  className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full"
-                  style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.primary,
-                  }}
+                  key={message.id}
+                  className={
+                    isUser
+                      ? "flex justify-end"
+                      : "flex justify-start"
+                  }
                 >
-                  <Bot size={25} />
-                </div>
-
-                <p className="text-sm font-semibold">
-                  Start a conversation
-                </p>
-
-                <p
-                  className="mt-1 text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Ask your AI Co-Pilot anything.
-                </p>
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-5">
-              {messages.map((message) => {
-                const isUser = message.role === "user";
-
-                return (
                   <div
-                    key={message.id}
                     className={
                       isUser
-                        ? "flex justify-end"
-                        : "flex justify-start"
+                        ? "flex max-w-[75%] flex-row-reverse items-end gap-3"
+                        : "flex max-w-[75%] items-end gap-3"
                     }
                   >
+                    {/* AVATAR */}
+
+                    <div
+                      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                      style={{
+                        backgroundColor: isUser
+                          ? colors.primary
+                          : colors.surfaceLight,
+                        color: isUser
+                          ? colors.black
+                          : colors.primary,
+                      }}
+                    >
+                      {isUser ? (
+                        <User size={16} />
+                      ) : (
+                        <Bot size={16} />
+                      )}
+                    </div>
+
+                    {/* MESSAGE */}
+
                     <div
                       className={
                         isUser
-                          ? "flex max-w-[75%] flex-row-reverse items-end gap-3"
-                          : "flex max-w-[75%] items-end gap-3"
+                          ? "flex flex-col items-end"
+                          : "flex flex-col items-start"
                       }
                     >
-                      {/* AVATAR */}
-
                       <div
-                        className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full"
+                        className="rounded-2xl px-4 py-3 text-sm leading-6"
                         style={{
                           backgroundColor: isUser
                             ? colors.primary
                             : colors.surfaceLight,
                           color: isUser
                             ? colors.black
-                            : colors.primary,
+                            : colors.text,
                         }}
                       >
-                        {isUser ? (
-                          <User size={16} />
-                        ) : (
-                          <Bot size={16} />
-                        )}
+                        {message.text}
                       </div>
 
-                      {/* MESSAGE */}
-
-                      <div
-                        className={
-                          isUser
-                            ? "flex flex-col items-end"
-                            : "flex flex-col items-start"
-                        }
+                      <span
+                        className="mt-1 px-1 text-[9px]"
+                        style={{
+                          color: colors.textMuted,
+                        }}
                       >
-                        <div
-                          className="rounded-2xl px-4 py-3 text-sm leading-6"
-                          style={{
-                            backgroundColor: isUser
-                              ? colors.primary
-                              : colors.surfaceLight,
-                            color: isUser
-                              ? colors.black
-                              : colors.text,
-                          }}
-                        >
-                          {message.text}
-                        </div>
-
-                        <span
-                          className="mt-1 px-1 text-[9px]"
-                          style={{
-                            color: colors.textMuted,
-                          }}
-                        >
-                          {message.time}
-                        </span>
-                      </div>
+                        {message.time}
+                      </span>
                     </div>
                   </div>
-                );
-              })}
-            </div>
-          )}
+                </div>
+              );
+            })}
+
+            {/* THINKING INDICATOR */}
+
+            {isThinking && (
+              <div className="flex justify-start">
+                <div className="flex items-end gap-3">
+                  <div
+                    className="flex h-9 w-9 items-center justify-center rounded-full"
+                    style={{
+                      backgroundColor: colors.surfaceLight,
+                      color: colors.primary,
+                    }}
+                  >
+                    <Bot size={16} />
+                  </div>
+
+                  <div
+                    className="flex items-center gap-2 rounded-2xl px-4 py-3 text-xs"
+                    style={{
+                      backgroundColor: colors.surfaceLight,
+                      color: colors.textMuted,
+                    }}
+                  >
+                    <Loader2
+                      size={14}
+                      className="animate-spin"
+                      style={{
+                        color: colors.primary,
+                      }}
+                    />
+
+                    AI is thinking...
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* INPUT SECTION */}
@@ -396,8 +418,11 @@ const [messages, setMessages] = useState<Message[]>(() => {
 
             <button
               type="button"
-              onClick={sendMessage}
-              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-opacity hover:opacity-80"
+              onClick={() => {
+                sendMessage();
+              }}
+              disabled={isThinking || !input.trim()}
+              className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-40"
               style={{
                 backgroundColor: colors.primary,
                 color: colors.black,
@@ -414,21 +439,28 @@ const [messages, setMessages] = useState<Message[]>(() => {
             <Suggestion
               text="Summarize my tasks"
               onClick={() => {
-                useSuggestion("Summarize my tasks");
+                runSuggestion("Summarize my tasks");
               }}
             />
 
             <Suggestion
               text="Show project status"
               onClick={() => {
-                useSuggestion("Show project status");
+                runSuggestion("Show project status");
               }}
             />
 
             <Suggestion
               text="Plan my day"
               onClick={() => {
-                useSuggestion("Plan my day");
+                runSuggestion("Plan my day");
+              }}
+            />
+
+            <Suggestion
+              text="Show today's schedule"
+              onClick={() => {
+                runSuggestion("Show today's schedule");
               }}
             />
           </div>
@@ -462,43 +494,147 @@ function Suggestion({
   );
 }
 
-/* DEMO AI RESPONSE */
+/* CURRENT TIME */
+
+function getCurrentTime(): string {
+  return new Date().toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/* FRONTEND AI COMMAND HANDLER */
 
 function getAIResponse(question: string): string {
-  const lowerQuestion = question.toLowerCase();
+  const lowerQuestion = question.toLowerCase().trim();
+
+  /* TASKS */
 
   if (
     lowerQuestion.includes("task") ||
-    lowerQuestion.includes("tasks")
+    lowerQuestion.includes("todo") ||
+    lowerQuestion.includes("to-do")
   ) {
-    return "You currently have 24 active workspace tasks. I can help you organize, prioritize, or summarize them.";
+    if (
+      lowerQuestion.includes("complete") ||
+      lowerQuestion.includes("completed")
+    ) {
+      return "You currently have 6 completed tasks. Keep going — there are 24 active tasks remaining in the workspace.";
+    }
+
+    if (
+      lowerQuestion.includes("pending") ||
+      lowerQuestion.includes("waiting")
+    ) {
+      return "You currently have 10 pending tasks. I recommend reviewing their priorities and deadlines first.";
+    }
+
+    return "You currently have 24 active tasks: 8 in progress, 10 pending, and 6 completed. I can help you organize or prioritize them.";
   }
+
+  /* PROJECTS */
 
   if (
     lowerQuestion.includes("project") ||
     lowerQuestion.includes("projects")
   ) {
-    return "You currently have 12 projects in your workspace. I can help you review their progress and priorities.";
+    if (
+      lowerQuestion.includes("status") ||
+      lowerQuestion.includes("progress")
+    ) {
+      return "You currently have 12 projects. Three projects are due soon. Your AI Office MVP is currently one of the main priorities.";
+    }
+
+    return "You currently have 12 projects in your workspace. I can help you review project status, priorities, and upcoming deadlines.";
   }
 
+  /* CALENDAR / SCHEDULE */
+
   if (
-    lowerQuestion.includes("day") ||
-    lowerQuestion.includes("schedule")
+    lowerQuestion.includes("calendar") ||
+    lowerQuestion.includes("schedule") ||
+    lowerQuestion.includes("meeting") ||
+    lowerQuestion.includes("appointment")
   ) {
-    return "I can help you plan your day. Start by reviewing your active tasks and today's schedule.";
+    return "Today's schedule has 3 activities: Team Standup at 10:00 AM, Client Meeting at 12:30 PM, and Project Review at 3:00 PM.";
   }
+
+  /* DAY PLANNING */
+
+  if (
+    lowerQuestion.includes("plan my day") ||
+    lowerQuestion.includes("my day") ||
+    lowerQuestion.includes("today")
+  ) {
+    return "Here's a suggested plan: start with your highest-priority tasks, attend the 10:00 AM Team Standup, prepare for the 12:30 PM Client Meeting, and finish the day with the 3:00 PM Project Review.";
+  }
+
+  /* REPORTS / PERFORMANCE */
 
   if (
     lowerQuestion.includes("report") ||
-    lowerQuestion.includes("performance")
+    lowerQuestion.includes("performance") ||
+    lowerQuestion.includes("productivity") ||
+    lowerQuestion.includes("score")
   ) {
-    return "Your workspace performance is currently strong. The latest productivity score is 92.";
+    return "Your current productivity score is 1,820 and your weekly productivity is 82%. Your workspace performance is trending positively.";
   }
 
+  /* DOCUMENTS */
+
+  if (
+    lowerQuestion.includes("document") ||
+    lowerQuestion.includes("file") ||
+    lowerQuestion.includes("report file")
+  ) {
+    return "You currently have documents available in the workspace. I can help you organize documents or prepare a project report. Actual file searching will be connected later through the backend.";
+  }
+
+  /* AI AGENTS */
+
+  if (
+    lowerQuestion.includes("agent") ||
+    lowerQuestion.includes("agents") ||
+    lowerQuestion.includes("ai team")
+  ) {
+    return "Your AI workspace currently includes 8 agents. The main agents include Manager, Research, Document, Workflow, and Meeting agents.";
+  }
+
+  /* WORKFLOWS */
+
+  if (
+    lowerQuestion.includes("workflow") ||
+    lowerQuestion.includes("automation") ||
+    lowerQuestion.includes("automate")
+  ) {
+    return "Your workspace can use automated workflows for repetitive office tasks. Workflow execution and real automation will be connected to the backend later.";
+  }
+
+  /* GREETING */
+
+  if (
+    lowerQuestion === "hi" ||
+    lowerQuestion === "hello" ||
+    lowerQuestion.includes("hey")
+  ) {
+    return "Hello! I'm ready to help with your tasks, projects, schedule, documents, reports, and AI workspace.";
+  }
+
+  /* HELP */
+
+  if (
+    lowerQuestion.includes("help") ||
+    lowerQuestion.includes("what can you do")
+  ) {
+    return "I can currently help with workspace tasks, projects, schedules, daily planning, reports, documents, AI agents, and workflows. Real AI reasoning and external system actions will be connected through the backend later.";
+  }
+
+  /* DEFAULT RESPONSE */
+
   return (
-    'I understand your request about "' +
+    "I understand your request: \"" +
     question +
-    '". I am currently running in demo mode. The next step will be connecting me to the real AI backend.'
+    "\". I can currently process common workspace commands such as tasks, projects, schedules, reports, documents, agents, and workflows. For completely open-ended AI conversations, we'll connect the real AI backend in the next phase."
   );
 }
 

@@ -21,7 +21,7 @@ import {
   Activity,
 } from "lucide-react";
 
-import { colors } from "./theme/colors";
+import { darkColors, lightColors } from "./theme/colors";
 import AICoPilot from "./components/AICoPilot";
 import Tasks from "./components/Tasks";
 import Projects from "./components/Projects";
@@ -33,9 +33,12 @@ import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import AIAgents from "./components/AIAgents";
 
+
 function App() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
 
+  const [themeMode, setThemeMode] = useState<"dark" | "light">("dark");
+  const colors = themeMode === "dark" ? darkColors : lightColors;
   const [aiCommand, setAiCommand] = useState("");
 
   const [copilotMessage, setCopilotMessage] = useState("");
@@ -291,13 +294,17 @@ function App() {
           ) : activeMenu === "Workflows" ? (
             <Workflows />
 
-          ) : activeMenu === "Reports" ? (
+                    ) : activeMenu === "Reports" ? (
             <Reports />
 
           ) : activeMenu === "Settings" ? (
-            <Settings />
+            <Settings
+              themeMode={themeMode}
+              onThemeChange={setThemeMode}
+            />
 
           ) : (
+            
 
             /* DASHBOARD */
             <>

@@ -1,3 +1,4 @@
+
 import {
   Settings as SettingsIcon,
   User,
@@ -8,13 +9,22 @@ import {
   Lock,
   Save,
   Moon,
+  Sun,
   Mail,
   Smartphone,
 } from "lucide-react";
 
-import { colors } from "../theme/colors";
+import { colors, type ThemeMode } from "../theme/colors";
 
-function Settings() {
+type SettingsProps = {
+  themeMode: ThemeMode;
+  onThemeChange: (mode: ThemeMode) => void;
+};
+
+function Settings({
+  themeMode,
+  onThemeChange,
+}: SettingsProps) {
   return (
     <div
       className="min-h-[calc(100vh-80px)] p-8"
@@ -223,12 +233,80 @@ function Settings() {
               </div>
             </div>
 
-            <SettingRow
-              icon={<Moon size={17} />}
-              title="Dark Mode"
-              description="Use the dark workspace theme"
-              enabled
-            />
+            {/* DARK / LIGHT MODE */}
+            <div
+              className="flex items-center justify-between rounded-xl p-4"
+              style={{
+                backgroundColor: colors.surfaceLight,
+              }}
+            >
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-9 w-9 items-center justify-center rounded-lg"
+                  style={{
+                    backgroundColor:
+                      "rgba(57,255,136,0.08)",
+                    color: colors.primary,
+                  }}
+                >
+                  {themeMode === "dark" ? (
+                    <Moon size={17} />
+                  ) : (
+                    <Sun size={17} />
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold">
+                    {themeMode === "dark"
+                      ? "Dark Mode"
+                      : "Light Mode"}
+                  </p>
+
+                  <p
+                    className="mt-1 text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Switch between dark and light workspace themes
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  onThemeChange(
+                    themeMode === "dark"
+                      ? "light"
+                      : "dark"
+                  );
+                }}
+                className="relative h-6 w-11 rounded-full transition"
+                style={{
+                  backgroundColor:
+                    themeMode === "dark"
+                      ? colors.primary
+                      : colors.surfaceLight,
+                }}
+                aria-label="Toggle theme"
+              >
+                <span
+                  className="absolute top-1 h-4 w-4 rounded-full transition"
+                  style={{
+                    left:
+                      themeMode === "dark"
+                        ? "24px"
+                        : "4px",
+                    backgroundColor:
+                      themeMode === "dark"
+                        ? colors.black
+                        : colors.textMuted,
+                  }}
+                />
+              </button>
+            </div>
           </section>
 
           {/* PRIVACY */}
@@ -262,7 +340,6 @@ function Settings() {
                 </p>
               </div>
             </div>
-
             <SettingRow
               icon={<Lock size={17} />}
               title="Two-Factor Authentication"
@@ -459,6 +536,7 @@ function Settings() {
 
           {/* SAVE */}
           <button
+            type="button"
             className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold"
             style={{
               backgroundColor: colors.primary,

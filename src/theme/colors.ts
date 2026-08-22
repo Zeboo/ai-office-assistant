@@ -1,20 +1,29 @@
-export const colors = {
-  background: "#07110E",
-  surface: "#0C1714",
-  surfaceLight: "#10201B",
 
+export type ThemeMode = "dark" | "light";
+
+export const darkColors = {
+  background: "#0B0B0B",
+  surface: "#111111",
+  surfaceLight: "#181818",
   primary: "#39FF88",
-  primaryDark: "#20C968",
-
-  text: "#FFFFFF",
-  textSecondary: "#A7B3AE",
-  textMuted: "#68756F",
-
-  border: "rgba(255,255,255,0.10)",
-
-  success: "#39FF88",
-  warning: "#F5C451",
-  danger: "#FF5C5C",
-
   black: "#000000",
-} as const;
+  text: "#FFFFFF",
+  textSecondary: "#B8B8B8",
+  textMuted: "#777777",
+  border: "#292929",
+};
+
+export const lightColors = {
+  background: "#F5F7FA",
+  surface: "#FFFFFF",
+  surfaceLight: "#EEF1F4",
+  primary: "#16A34A",
+  black: "#FFFFFF",
+  text: "#111827",
+  textSecondary: "#4B5563",
+  textMuted: "#6B7280",
+  border: "#D9DEE5",
+};
+
+// Default colors — keeps existing components working
+export const colors = darkColors;
