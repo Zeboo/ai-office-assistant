@@ -13,8 +13,7 @@ import {
   Mail,
   Smartphone,
 } from "lucide-react";
-
-import { colors, type ThemeMode } from "../theme/colors";
+import { darkColors, lightColors, type ThemeMode } from "../theme/colors";
 
 type SettingsProps = {
   themeMode: ThemeMode;
@@ -24,7 +23,9 @@ type SettingsProps = {
 function Settings({
   themeMode,
   onThemeChange,
-}: SettingsProps) {
+}: SettingsProps) { 
+   const colors = themeMode === "dark" ? darkColors : lightColors;
+  
   return (
     <div
       className="min-h-[calc(100vh-80px)] p-8"
@@ -565,6 +566,7 @@ function SettingRow({
   description,
   enabled,
 }: SettingRowProps) {
+    const colors = darkColors;
   return (
     <div className="flex items-center justify-between">
       <div className="flex items-center gap-3">
