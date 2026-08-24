@@ -10,7 +10,11 @@ import {
   Loader2,
 } from "lucide-react";
 
-import { colors } from "../theme/colors";
+import {
+  darkColors,
+  lightColors,
+  type ThemeMode,
+} from "../theme/colors";
 
 type Message = {
   id: number;
@@ -21,9 +25,17 @@ type Message = {
 
 type AICopilotProps = {
   initialMessage?: string;
+  themeMode: ThemeMode;
 };
 
-function AICopilot({ initialMessage }: AICopilotProps) {
+function AICopilot({
+  initialMessage,
+  themeMode,
+}: AICopilotProps) {
+
+    const colors =
+    themeMode === "dark" ? darkColors : lightColors;
+
   const [input, setInput] = useState("");
 
   const [isThinking, setIsThinking] = useState(false);
@@ -438,6 +450,7 @@ function AICopilot({ initialMessage }: AICopilotProps) {
           <div className="mt-3 flex flex-wrap gap-2">
             <Suggestion
               text="Summarize my tasks"
+              colors={colors}
               onClick={() => {
                 runSuggestion("Summarize my tasks");
               }}
@@ -445,6 +458,7 @@ function AICopilot({ initialMessage }: AICopilotProps) {
 
             <Suggestion
               text="Show project status"
+              colors={colors}
               onClick={() => {
                 runSuggestion("Show project status");
               }}
@@ -452,6 +466,7 @@ function AICopilot({ initialMessage }: AICopilotProps) {
 
             <Suggestion
               text="Plan my day"
+              colors={colors}
               onClick={() => {
                 runSuggestion("Plan my day");
               }}
@@ -459,6 +474,7 @@ function AICopilot({ initialMessage }: AICopilotProps) {
 
             <Suggestion
               text="Show today's schedule"
+              colors={colors}
               onClick={() => {
                 runSuggestion("Show today's schedule");
               }}
@@ -475,10 +491,13 @@ function AICopilot({ initialMessage }: AICopilotProps) {
 function Suggestion({
   text,
   onClick,
+  colors,
 }: {
   text: string;
   onClick: () => void;
+  colors: typeof darkColors;
 }) {
+
   return (
     <button
       type="button"
