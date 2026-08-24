@@ -273,10 +273,10 @@ function App() {
          {activeMenu === "AI Co-Pilot" ? (
   <AICoPilot initialMessage={copilotMessage} />
 
-          ) : activeMenu === "Tasks" ? (
-            <Tasks />
-
-          ) : activeMenu === "Projects" ? (
+         ) : activeMenu === "Tasks" ? (
+ <Tasks themeMode={themeMode} />
+ 
+) : activeMenu === "Projects" ? (
             <Projects />
 
           ) : activeMenu === "Calendar" ? (

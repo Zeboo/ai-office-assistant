@@ -1,3 +1,4 @@
+
 import { useMemo, useState } from "react";
 import {
   CheckSquare,
@@ -13,7 +14,15 @@ import {
   X,
 } from "lucide-react";
 
-import { colors } from "../theme/colors";
+import {
+  darkColors,
+  lightColors,
+  type ThemeMode,
+} from "../theme/colors";
+
+type TasksProps = {
+  themeMode: ThemeMode;
+};
 
 type TaskStatus = "In Progress" | "Pending" | "Completed";
 type TaskPriority = "High" | "Medium" | "Low";
@@ -82,7 +91,10 @@ const initialTasks: Task[] = [
   },
 ];
 
-function Tasks() {
+function Tasks({ themeMode }: TasksProps) {
+  const colors =
+    themeMode === "dark" ? darkColors : lightColors;
+
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [filter, setFilter] = useState<"All" | TaskStatus>("All");
   const [search, setSearch] = useState("");
@@ -92,6 +104,9 @@ function Tasks() {
   const [newDescription, setNewDescription] = useState("");
   const [newPriority, setNewPriority] =
     useState<TaskPriority>("Medium");
+
+    const [newAssigned, setNewAssigned] =
+  useState("Palwasha Khan");
 
   const filteredTasks = useMemo(() => {
     return tasks.filter((task) => {
@@ -164,7 +179,7 @@ function Tasks() {
       priority: newPriority,
       status: "Pending",
       date: "Today",
-      assigned: "Palwasha",
+      assigned: newAssigned,
       ai: false,
     };
 
@@ -173,10 +188,11 @@ function Tasks() {
       ...currentTasks,
     ]);
 
-    setNewTitle("");
-    setNewDescription("");
-    setNewPriority("Medium");
-    setShowCreateModal(false);
+   setNewTitle("");
+setNewDescription("");
+setNewPriority("Medium");
+setNewAssigned("Palwasha Khan");
+setShowCreateModal(false);
   };
 
   return (
@@ -190,32 +206,30 @@ function Tasks() {
       {/* HEADER */}
 
       <div className="mb-7 flex items-center justify-between">
-        <div>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-11 w-11 items-center justify-center rounded-xl"
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-11 w-11 items-center justify-center rounded-xl"
+            style={{
+              backgroundColor: colors.primary,
+              color: colors.black,
+            }}
+          >
+            <CheckSquare size={22} />
+          </div>
+
+          <div>
+            <h1 className="text-2xl font-bold">
+              Tasks
+            </h1>
+
+            <p
+              className="text-sm"
               style={{
-                backgroundColor: colors.primary,
-                color: colors.black,
+                color: colors.textMuted,
               }}
             >
-              <CheckSquare size={22} />
-            </div>
-
-            <div>
-              <h1 className="text-2xl font-bold">
-                Tasks
-              </h1>
-
-              <p
-                className="text-sm"
-                style={{
-                  color: colors.textMuted,
-                }}
-              >
-                Manage your work and AI-generated tasks
-              </p>
-            </div>
+              Manage your work and AI-generated tasks
+            </p>
           </div>
         </div>
 
@@ -239,22 +253,26 @@ function Tasks() {
         <StatCard
           title="Total Tasks"
           value={totalTasks}
+          colors={colors}
         />
 
         <StatCard
           title="In Progress"
           value={inProgressTasks}
           highlight
+          colors={colors}
         />
 
         <StatCard
           title="Pending"
           value={pendingTasks}
+          colors={colors}
         />
 
         <StatCard
           title="Completed"
           value={completedTasks}
+          colors={colors}
         />
       </div>
 
@@ -354,8 +372,7 @@ function Tasks() {
           color: colors.textMuted,
         }}
       >
-        Showing {filteredTasks.length} of {totalTasks}{" "}
-        tasks
+        Showing {filteredTasks.length} of {totalTasks} tasks
       </div>
 
       {/* TASK LIST */}
@@ -397,6 +414,7 @@ function Tasks() {
               task={task}
               onToggle={() => toggleTask(task.id)}
               onDelete={() => deleteTask(task.id)}
+              colors={colors}
             />
           ))
         )}
@@ -516,8 +534,7 @@ function Tasks() {
                   value={newPriority}
                   onChange={(event) =>
                     setNewPriority(
-                      event.target
-                        .value as TaskPriority
+                      event.target.value as TaskPriority
                     )
                   }
                   className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
@@ -528,12 +545,57 @@ function Tasks() {
                   }}
                 >
                   <option value="High">High</option>
-                  <option value="Medium">
-                    Medium
-                  </option>
+                  <option value="Medium">Medium</option>
                   <option value="Low">Low</option>
                 </select>
               </div>
+
+              <div>
+  <label className="mb-2 block text-xs font-semibold">
+    Assigned To
+  </label>
+
+  <select
+    value={newAssigned}
+    onChange={(event) =>
+      setNewAssigned(event.target.value)
+    }
+    className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+    style={{
+      backgroundColor: colors.background,
+      borderColor: colors.border,
+      color: colors.text,
+    }}
+  >
+    <option value="Palwasha Khan">
+      Palwasha Khan
+    </option>
+
+    <option value="Manager Agent">
+      Manager Agent
+    </option>
+
+    <option value="Research Agent">
+      Research Agent
+    </option>
+
+    <option value="Document Agent">
+      Document Agent
+    </option>
+
+    <option value="Calendar Agent">
+      Calendar Agent
+    </option>
+
+    <option value="Data Agent">
+      Data Agent
+    </option>
+
+    <option value="Finance Agent">
+      Finance Agent
+    </option>
+  </select>
+</div>
             </div>
 
             <div className="mt-6 flex justify-end gap-3">
@@ -544,8 +606,7 @@ function Tasks() {
                 }
                 className="rounded-xl px-4 py-3 text-sm font-semibold"
                 style={{
-                  backgroundColor:
-                    colors.surfaceLight,
+                  backgroundColor: colors.surfaceLight,
                   color: colors.textSecondary,
                 }}
               >
@@ -577,10 +638,12 @@ function StatCard({
   title,
   value,
   highlight = false,
+  colors,
 }: {
   title: string;
   value: number;
   highlight?: boolean;
+  colors: typeof darkColors;
 }) {
   return (
     <div
@@ -619,10 +682,12 @@ function TaskCard({
   task,
   onToggle,
   onDelete,
+  colors,
 }: {
   task: Task;
   onToggle: () => void;
   onDelete: () => void;
+  colors: typeof darkColors;
 }) {
   const [showMenu, setShowMenu] = useState(false);
 
