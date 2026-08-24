@@ -1,5 +1,10 @@
 
 import {
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
+import {
   Settings as SettingsIcon,
   User,
   Bell,
@@ -12,23 +17,114 @@ import {
   Sun,
   Mail,
   Smartphone,
+  Check,
 } from "lucide-react";
-import { darkColors, lightColors, type ThemeMode } from "../theme/colors";
+
+import {
+  darkColors,
+  lightColors,
+  type ThemeMode,
+} from "../theme/colors";
 
 type SettingsProps = {
   themeMode: ThemeMode;
   onThemeChange: (mode: ThemeMode) => void;
 };
 
+type SettingsState = {
+
+  
+  fullName: string;
+email: string;
+profileImage: string;
+
+  emailNotifications: boolean;
+  taskNotifications: boolean;
+  mobileNotifications: boolean;
+  twoFactorAuthentication: boolean;
+  automaticTasks: boolean;
+  smartSuggestions: boolean;
+  language: string;
+};
+
+const defaultSettings: SettingsState = {
+
+  fullName: "Palwasha",
+email: "palwasha@example.com",
+profileImage: "",
+  emailNotifications: true,
+  taskNotifications: true,
+  mobileNotifications: false,
+  twoFactorAuthentication: false,
+  automaticTasks: true,
+  smartSuggestions: true,
+  language: "English",
+};
+
 function Settings({
   themeMode,
   onThemeChange,
-}: SettingsProps) { 
-   const colors = themeMode === "dark" ? darkColors : lightColors;
+}: SettingsProps) {
+
+   
   
+  const colors =
+    themeMode === "dark" ? darkColors : lightColors;
+    const fileInputRef = useRef<HTMLInputElement>(null);
+
+ const [settings, setSettings] =
+  useState<SettingsState>(() => {
+      const savedSettings =
+        localStorage.getItem("ai-office-settings");
+
+      if (savedSettings) {
+        try {
+          return {
+            ...defaultSettings,
+            ...JSON.parse(savedSettings),
+          };
+        } catch {
+          return defaultSettings;
+        }
+      }
+
+      return defaultSettings;
+    });
+
+  const [saved, setSaved] = useState(false);
+
+  const updateSetting = (
+    key: keyof SettingsState,
+    value: boolean | string,
+  ) => {
+    setSettings((previous) => ({
+      ...previous,
+      [key]: value,
+    }));
+
+    setSaved(false);
+  };
+
+  const saveSettings = () => {
+  localStorage.setItem(
+    "ai-office-settings",
+    JSON.stringify(settings),
+  );
+
+  setSettings((previous) => ({
+    ...previous,
+  }));
+
+  setSaved(true);
+
+  setTimeout(() => {
+    setSaved(false);
+  }, 2000);
+};
+
   return (
     <div
-      className="min-h-[calc(100vh-80px)] p-8"
+      className="min-h-[calc(100vh-80px)] p-8 transition-colors"
       style={{
         backgroundColor: colors.background,
         color: colors.text,
@@ -100,6 +196,8 @@ function Settings({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+
+              {/* NAME */}
               <div>
                 <label
                   className="mb-2 block text-xs"
@@ -110,18 +208,23 @@ function Settings({
                   Full Name
                 </label>
 
-                <input
-                  value="Palwasha"
-                  readOnly
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                />
+               <input
+  value={settings.fullName}
+  onChange={(event) => {
+    updateSetting("fullName", event.target.value);
+  }}
+  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+  style={{
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    color: colors.text,
+  }}
+/>
+                 
+                
               </div>
 
+              {/* EMAIL */}
               <div>
                 <label
                   className="mb-2 block text-xs"
@@ -132,17 +235,35 @@ function Settings({
                   Email
                 </label>
 
-                <input
-                  value="palwasha@example.com"
-                  readOnly
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                />
+<input
+  value={settings.email}
+  onChange={(event) => {
+    updateSetting("email", event.target.value);
+  }}
+  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+  style={{
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    color: colors.text,
+  }}
+/>
+                 
+                
               </div>
+
+            </div>
+                        <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={saveSettings}
+                className="rounded-xl px-5 py-2.5 text-xs font-bold transition"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors.black,
+                }}
+              >
+                Save Profile
+              </button>
             </div>
           </section>
 
@@ -179,26 +300,49 @@ function Settings({
             </div>
 
             <div className="space-y-4">
+
               <SettingRow
+                colors={colors}
                 icon={<Mail size={17} />}
                 title="Email Notifications"
                 description="Receive important updates by email"
-                enabled
+                enabled={settings.emailNotifications}
+                onToggle={() =>
+                  updateSetting(
+                    "emailNotifications",
+                    !settings.emailNotifications,
+                  )
+                }
               />
 
               <SettingRow
+                colors={colors}
                 icon={<Bell size={17} />}
                 title="Task Notifications"
                 description="Get notified when tasks change"
-                enabled
+                enabled={settings.taskNotifications}
+                onToggle={() =>
+                  updateSetting(
+                    "taskNotifications",
+                    !settings.taskNotifications,
+                  )
+                }
               />
 
               <SettingRow
+                colors={colors}
                 icon={<Smartphone size={17} />}
                 title="Mobile Notifications"
                 description="Receive notifications on your devices"
-                enabled={false}
+                enabled={settings.mobileNotifications}
+                onToggle={() =>
+                  updateSetting(
+                    "mobileNotifications",
+                    !settings.mobileNotifications,
+                  )
+                }
               />
+
             </div>
           </section>
 
@@ -234,7 +378,7 @@ function Settings({
               </div>
             </div>
 
-            {/* DARK / LIGHT MODE */}
+            {/* THEME */}
             <div
               className="flex items-center justify-between rounded-xl p-4"
               style={{
@@ -242,11 +386,14 @@ function Settings({
               }}
             >
               <div className="flex items-center gap-3">
+
                 <div
                   className="flex h-9 w-9 items-center justify-center rounded-lg"
                   style={{
                     backgroundColor:
-                      "rgba(57,255,136,0.08)",
+                      themeMode === "dark"
+                        ? "rgba(57,255,136,0.08)"
+                        : "rgba(22,163,74,0.08)",
                     color: colors.primary,
                   }}
                 >
@@ -273,6 +420,7 @@ function Settings({
                     Switch between dark and light workspace themes
                   </p>
                 </div>
+
               </div>
 
               <button
@@ -281,7 +429,7 @@ function Settings({
                   onThemeChange(
                     themeMode === "dark"
                       ? "light"
-                      : "dark"
+                      : "dark",
                   );
                 }}
                 className="relative h-6 w-11 rounded-full transition"
@@ -307,10 +455,11 @@ function Settings({
                   }}
                 />
               </button>
+
             </div>
           </section>
 
-          {/* PRIVACY */}
+          {/* PRIVACY & SECURITY */}
           <section
             className="rounded-2xl border p-6"
             style={{
@@ -341,13 +490,24 @@ function Settings({
                 </p>
               </div>
             </div>
+
             <SettingRow
+              colors={colors}
               icon={<Lock size={17} />}
               title="Two-Factor Authentication"
               description="Add an extra layer of account security"
-              enabled={false}
+              enabled={
+                settings.twoFactorAuthentication
+              }
+              onToggle={() =>
+                updateSetting(
+                  "twoFactorAuthentication",
+                  !settings.twoFactorAuthentication,
+                )
+              }
             />
 
+            {/* SESSION SECURITY */}
             <div
               className="mt-4 flex items-center justify-between rounded-xl p-4"
               style={{
@@ -373,7 +533,9 @@ function Settings({
                 className="rounded-lg px-3 py-1.5 text-[10px] font-semibold"
                 style={{
                   backgroundColor:
-                    "rgba(57,255,136,0.10)",
+                    themeMode === "dark"
+                      ? "rgba(57,255,136,0.10)"
+                      : "rgba(22,163,74,0.10)",
                   color: colors.primary,
                 }}
               >
@@ -395,20 +557,59 @@ function Settings({
             }}
           >
             <div className="flex items-center gap-4">
+
               <div
-                className="flex h-14 w-14 items-center justify-center rounded-full text-lg font-bold"
-                style={{
-                  backgroundColor: colors.primary,
-                  color: colors.black,
-                }}
-              >
-                P
-              </div>
+  className="relative h-14 w-14 cursor-pointer overflow-hidden rounded-full"
+  onClick={() => fileInputRef.current?.click()}
+  title="Change profile picture"
+>
+  {settings.profileImage ? (
+    <img
+      src={settings.profileImage}
+      alt="Profile"
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div
+      className="flex h-full w-full items-center justify-center text-lg font-bold"
+      style={{
+        backgroundColor: colors.primary,
+        color: colors.black,
+      }}
+    >
+      {settings.fullName.charAt(0).toUpperCase() || "P"}
+    </div>
+  )}
+</div>
+
+<input
+  ref={fileInputRef}
+  type="file"
+  accept="image/*"
+  className="hidden"
+  onChange={(event) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    const reader = new FileReader();
+
+    reader.onload = () => {
+      const result = reader.result;
+
+      if (typeof result === "string") {
+        updateSetting("profileImage", result);
+      }
+    };
+
+    reader.readAsDataURL(file);
+  }}
+/>
 
               <div>
                 <h2 className="font-semibold">
-                  Palwasha
-                </h2>
+  {settings.fullName}
+</h2>
 
                 <p
                   className="text-xs"
@@ -419,6 +620,7 @@ function Settings({
                   Premium User
                 </p>
               </div>
+
             </div>
 
             <div
@@ -428,6 +630,7 @@ function Settings({
               }}
             >
               <div className="flex items-center justify-between">
+
                 <span
                   className="text-xs"
                   style={{
@@ -445,6 +648,7 @@ function Settings({
                 >
                   Active
                 </span>
+
               </div>
             </div>
           </section>
@@ -458,6 +662,7 @@ function Settings({
             }}
           >
             <div className="mb-4 flex items-center gap-3">
+
               <Globe
                 size={18}
                 style={{
@@ -479,16 +684,23 @@ function Settings({
                   Choose your preferred language
                 </p>
               </div>
+
             </div>
 
             <select
+              value={settings.language}
+              onChange={(event) => {
+                updateSetting(
+                  "language",
+                  event.target.value,
+                );
+              }}
               className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
               style={{
                 backgroundColor: colors.background,
                 borderColor: colors.border,
                 color: colors.text,
               }}
-              defaultValue="English"
             >
               <option>English</option>
               <option>Urdu</option>
@@ -521,32 +733,63 @@ function Settings({
             </div>
 
             <div className="space-y-4">
+
               <SettingRow
+                colors={colors}
                 title="Automatic Tasks"
                 description="Allow AI agents to create tasks"
-                enabled
+                enabled={settings.automaticTasks}
+                onToggle={() =>
+                  updateSetting(
+                    "automaticTasks",
+                    !settings.automaticTasks,
+                  )
+                }
               />
 
               <SettingRow
+                colors={colors}
                 title="Smart Suggestions"
                 description="Receive AI-powered suggestions"
-                enabled
+                enabled={settings.smartSuggestions}
+                onToggle={() =>
+                  updateSetting(
+                    "smartSuggestions",
+                    !settings.smartSuggestions,
+                  )
+                }
               />
+
             </div>
           </section>
 
           {/* SAVE */}
           <button
             type="button"
-            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold"
+            onClick={saveSettings}
+            className="flex w-full items-center justify-center gap-2 rounded-xl py-3 text-sm font-bold transition"
             style={{
-              backgroundColor: colors.primary,
-              color: colors.black,
+              backgroundColor: saved
+                ? colors.surfaceLight
+                : colors.primary,
+              color: saved
+                ? colors.primary
+                : colors.black,
             }}
           >
-            <Save size={17} />
-            Save Settings
+            {saved ? (
+              <>
+                <Check size={17} />
+                Settings Saved
+              </>
+            ) : (
+              <>
+                <Save size={17} />
+                Save Settings
+              </>
+            )}
           </button>
+
         </div>
       </div>
     </div>
@@ -554,28 +797,35 @@ function Settings({
 }
 
 type SettingRowProps = {
-  icon?: React.ReactNode;
+  colors: typeof darkColors;
+   icon?: ReactNode;
   title: string;
   description: string;
   enabled: boolean;
+  onToggle: () => void;
 };
 
 function SettingRow({
+  colors,
   icon,
   title,
   description,
   enabled,
+  onToggle,
 }: SettingRowProps) {
-    const colors = darkColors;
   return (
     <div className="flex items-center justify-between">
+
       <div className="flex items-center gap-3">
+
         {icon && (
           <div
             className="flex h-9 w-9 items-center justify-center rounded-lg"
             style={{
               backgroundColor:
-                "rgba(57,255,136,0.08)",
+                enabled
+                  ? "rgba(57,255,136,0.08)"
+                  : colors.surfaceLight,
               color: colors.primary,
             }}
           >
@@ -597,26 +847,33 @@ function SettingRow({
             {description}
           </p>
         </div>
+
       </div>
 
-      <div
-        className="relative h-6 w-11 rounded-full"
+      <button
+        type="button"
+        onClick={onToggle}
+        className="relative h-6 w-11 rounded-full transition"
         style={{
           backgroundColor: enabled
             ? colors.primary
             : colors.surfaceLight,
         }}
+          aria-label={`Toggle ${title}`}
       >
-        <div
-          className="absolute top-1 h-4 w-4 rounded-full"
+        <span
+          className="absolute top-1 h-4 w-4 rounded-full transition"
           style={{
-            left: enabled ? "24px" : "4px",
+            left: enabled
+              ? "24px"
+              : "4px",
             backgroundColor: enabled
               ? colors.black
               : colors.textMuted,
           }}
         />
-      </div>
+      </button>
+
     </div>
   );
 }
