@@ -32,7 +32,7 @@ import Workflows from "./components/Workflows";
 import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import AIAgents from "./components/AIAgents";
-
+import AIAssistant from "./components/AIAssistant";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
@@ -40,6 +40,32 @@ function App() {
   const [themeMode, setThemeMode] = useState<"dark" | "light">("dark");
   const colors = themeMode === "dark" ? darkColors : lightColors;
   const [aiCommand, setAiCommand] = useState("");
+
+  const [showNotifications, setShowNotifications] = useState(false);
+
+const [notifications, setNotifications] = useState([
+  {
+    id: 1,
+    title: "Research Agent completed task",
+    message: "Market research has been completed.",
+    time: "2m ago",
+    unread: true,
+  },
+  {
+    id: 2,
+    title: "Document Agent generated report",
+    message: "Project report is ready.",
+    time: "8m ago",
+    unread: true,
+  },
+  {
+    id: 3,
+    title: "Calendar Agent scheduled meeting",
+    message: "Client meeting has been scheduled.",
+    time: "15m ago",
+    unread: false,
+  },
+]);
 
   const [copilotMessage, setCopilotMessage] = useState("");
 
@@ -311,6 +337,9 @@ function App() {
 
             /* DASHBOARD */
             <>
+
+           <AIAssistant colors={colors} />
+
               {/* TOP BAR */}
               <header
                 className="flex h-20 items-center justify-between border-b px-8"
@@ -361,23 +390,144 @@ function App() {
                   </div>
 
                   {/* NOTIFICATION */}
-                  <button
-                    type="button"
-                    className="relative rounded-xl border p-2.5"
-                    style={{
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                    }}
-                  >
-                    <Bell size={18} />
+                  
+<div className="relative">
+  <button
+    type="button"
+    onClick={() =>
+      setShowNotifications((current) => !current)
+    }
+    className="relative rounded-xl border p-2.5"
+    style={{
+      backgroundColor: colors.surface,
+      borderColor: colors.border,
+    }}
+  >
+    <Bell size={18} />
 
-                    <span
-                      className="absolute right-1 top-1 h-2 w-2 rounded-full"
-                      style={{
-                        backgroundColor: colors.primary,
-                      }}
-                    />
-                  </button>
+    {notifications.some((item) => item.unread) && (
+      <span
+        className="absolute right-1 top-1 h-2 w-2 rounded-full"
+        style={{
+          backgroundColor: colors.primary,
+        }}
+      />
+    )}
+  </button>
+
+  {showNotifications && (
+    <div
+      className="absolute right-0 top-12 z-50 w-80 rounded-2xl border p-4 shadow-2xl"
+      style={{
+        backgroundColor: colors.surface,
+        borderColor: colors.border,
+      }}
+    >
+      <div className="mb-3 flex items-center justify-between">
+        <div>
+          <h3 className="text-sm font-bold">
+            Notifications
+          </h3>
+
+          <p
+            className="mt-1 text-[10px]"
+            style={{
+              color: colors.textMuted,
+            }}
+          >
+            Recent AI activity
+          </p>
+        </div>
+
+        <button
+          type="button"
+         onClick={() => {
+  setNotifications((current) =>
+    current.map((item) => ({
+      ...item,
+      unread: false,
+    }))
+  );
+
+  setShowNotifications(false);
+}}
+          className="text-[10px] font-semibold"
+          style={{
+            color: colors.primary,
+          }}
+        >
+          Mark all read
+        </button>
+      </div>
+
+      <div className="space-y-2">
+        {notifications.map((notification) => (
+          <div
+            key={notification.id}
+            className="rounded-xl p-3"
+            style={{
+              backgroundColor:
+                notification.unread
+                  ? "rgba(57,255,136,0.08)"
+                  : colors.surfaceLight,
+            }}
+          >
+            <div className="flex items-start gap-3">
+              <div
+                className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg"
+                style={{
+                  backgroundColor:
+                    "rgba(57,255,136,0.10)",
+                }}
+              >
+                <Bot
+                  size={14}
+                  style={{
+                    color: colors.primary,
+                  }}
+                />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <p className="text-xs font-semibold">
+                  {notification.title}
+                </p>
+
+                <p
+                  className="mt-1 text-[10px]"
+                  style={{
+                    color: colors.textMuted,
+                  }}
+                >
+                  {notification.message}
+                </p>
+
+                <p
+                  className="mt-1 text-[9px]"
+                  style={{
+                    color: colors.textMuted,
+                  }}
+                >
+                  {notification.time}
+                </p>
+              </div>
+
+              {notification.unread && (
+                <span
+                  className="mt-1 h-2 w-2 rounded-full"
+                  style={{
+                    backgroundColor: colors.primary,
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )}
+</div>
+
                 </div>
               </header>
 
