@@ -33,6 +33,7 @@ import Reports from "./components/Reports";
 import Settings from "./components/Settings";
 import AIAgents from "./components/AIAgents";
 import AIAssistant from "./components/AIAssistant";
+import VirtualOffice from "./components/VirtualOffice";
 
 function App() {
   const [activeMenu, setActiveMenu] = useState("Dashboard");
@@ -337,7 +338,7 @@ const [notifications, setNotifications] = useState([
 
             /* DASHBOARD */
             <>
-
+            <VirtualOffice themeMode={themeMode} />
            <AIAssistant colors={colors} />
 
               {/* TOP BAR */}
