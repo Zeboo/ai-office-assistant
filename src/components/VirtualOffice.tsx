@@ -1,5 +1,11 @@
-
 import { useState } from "react";
+type AssistantLog = {
+  command: string;
+  understood: string;
+  assignedTo: string;
+  response: string;
+  systemControl: "Active" | "Inactive";
+};
 
 type VirtualOfficeProps = {
   themeMode: "dark" | "light";
@@ -66,6 +72,8 @@ const avatarOptions = [
   "👩🏻‍🔬",
   "👨🏻‍💼",
   "👩🏻‍💼",
+  "🧑🏻‍💻",
+  "🧑🏻‍💼",
 ];
 
 function VirtualOffice({ themeMode }: VirtualOfficeProps) {
@@ -80,11 +88,90 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
     useState<Employee | null>(null);
 
   const [name, setName] = useState("");
-  const [role, setRole] = useState("Developer Agent");
+  const [role, setRole] =
+    useState("Developer Agent");
+
   const [department, setDepartment] =
     useState("Development");
+
   const [status, setStatus] =
     useState<Employee["status"]>("Available");
+    const [assistantCommand, setAssistantCommand] = useState("");
+
+
+
+const [assistantLog, setAssistantLog] =
+    useState<AssistantLog>({
+      command: "No command yet",
+      understood: "Waiting for your instruction",
+      assignedTo: "Not assigned",
+      response: "No response yet",
+      systemControl: "Inactive",
+    });
+
+const [isAssistantListening, setIsAssistantListening] =
+    useState(false);
+
+const runAssistant = () => {
+  if (!assistantCommand.trim()) {
+    return;
+  }
+
+  setIsAssistantListening(true);
+
+  setTimeout(() => {
+    const command = assistantCommand.trim();
+
+    let assignedTo = "AI Manager";
+    let understood = "General office task";
+    let response = "Task received and processed.";
+
+    if (
+      command.toLowerCase().includes("website") ||
+      command.toLowerCase().includes("code") ||
+      command.toLowerCase().includes("developer")
+    ) {
+      assignedTo = "Developer Agent";
+      understood = "Website development task";
+      response =
+        "Developer Agent received the task and is working on it.";
+    } else if (
+      command.toLowerCase().includes("research") ||
+      command.toLowerCase().includes("search")
+    ) {
+      assignedTo = "Research Agent";
+      understood = "Research and information gathering task";
+      response =
+        "Research Agent received the task and started processing.";
+    } else if (
+      command.toLowerCase().includes("design") ||
+      command.toLowerCase().includes("ui")
+    ) {
+      assignedTo = "Design Agent";
+      understood = "UI / creative design task";
+      response =
+        "Design Agent received the task and started working.";
+    } else if (
+      command.toLowerCase().includes("employee") ||
+      command.toLowerCase().includes("hr")
+    ) {
+      assignedTo = "HR Agent";
+      understood = "Employee / HR related task";
+      response =
+        "HR Agent received the task and is processing it.";
+    }
+
+    setAssistantLog({
+      command,
+      understood,
+      assignedTo,
+      response,
+      systemControl: "Active",
+    });
+
+    setIsAssistantListening(false);
+  }, 800);
+};
 
   const hireEmployee = () => {
     if (!name.trim()) {
@@ -117,7 +204,9 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
 
   const fireEmployee = (id: number) => {
     setEmployees((current) =>
-      current.filter((employee) => employee.id !== id)
+      current.filter(
+        (employee) => employee.id !== id
+      )
     );
 
     setSelectedEmployee(null);
@@ -149,11 +238,13 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
   };
 
   const workingCount = employees.filter(
-    (employee) => employee.status === "Working"
+    (employee) =>
+      employee.status === "Working"
   ).length;
 
   const availableCount = employees.filter(
-    (employee) => employee.status === "Available"
+    (employee) =>
+      employee.status === "Available"
   ).length;
 
   const idleCount = employees.filter(
@@ -168,48 +259,380 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
         employee.department === departmentName
     );
 
+  
+  
+  
+
   return (
     <div
       className="min-h-screen overflow-hidden p-6"
       style={{
-        backgroundColor: dark ? "#080a09" : "#e9eeeb",
-        color: dark ? "#ffffff" : "#17201b",
+        backgroundColor: dark
+          ? "#080a09"
+          : "#e9eeeb",
+        color: dark
+          ? "#ffffff"
+          : "#17201b",
       }}
     >
+      {/* ========================= */}
+      {/* MOVEMENT ANIMATIONS */}
+      {/* ========================= */}
+
+      <style>
+        {`
+          @keyframes walkAround1 {
+            0% {
+              transform: translate(0px, 0px);
+            }
+            25% {
+              transform: translate(24px, 8px);
+            }
+            50% {
+              transform: translate(12px, 30px);
+            }
+            75% {
+              transform: translate(-18px, 18px);
+            }
+            100% {
+              transform: translate(0px, 0px);
+            }
+          }
+
+          @keyframes walkAround2 {
+            0% {
+              transform: translate(0px, 0px);
+            }
+            25% {
+              transform: translate(-22px, 10px);
+            }
+            50% {
+              transform: translate(-8px, 30px);
+            }
+            75% {
+              transform: translate(20px, 15px);
+            }
+            100% {
+              transform: translate(0px, 0px);
+            }
+          }
+
+          @keyframes walkAround3 {
+            0% {
+              transform: translate(0px, 0px);
+            }
+            20% {
+              transform: translate(15px, -8px);
+            }
+            40% {
+              transform: translate(28px, 18px);
+            }
+            60% {
+              transform: translate(4px, 34px);
+            }
+            80% {
+              transform: translate(-20px, 12px);
+            }
+            100% {
+              transform: translate(0px, 0px);
+            }
+          }
+
+          @keyframes walkAround4 {
+            0% {
+              transform: translate(0px, 0px);
+            }
+            25% {
+              transform: translate(-16px, -6px);
+            }
+            50% {
+              transform: translate(-30px, 22px);
+            }
+            75% {
+              transform: translate(8px, 32px);
+            }
+            100% {
+              transform: translate(0px, 0px);
+            }
+          }
+
+          @keyframes idleBounce {
+            0% {
+              transform: translateY(0px);
+            }
+            50% {
+              transform: translateY(-3px);
+            }
+            100% {
+              transform: translateY(0px);
+            }
+          }
+
+          .office-walker {
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+          }
+
+          .office-walker:hover {
+            animation-play-state: paused;
+          }
+
+          .employee-shadow {
+            box-shadow:
+              0 5px 10px rgba(0,0,0,0.22);
+          }
+        `}
+      </style>
+
+        
+      
+
+     
+{/* ========================= */}
+{/* VOICE ASSISTANT */}
+{/* ========================= */}
+
+<div
+  className="mb-5 rounded-3xl border p-5"
+  style={{
+    backgroundColor: dark
+      ? "#111412"
+      : "#ffffff",
+    borderColor: dark
+      ? "#303a35"
+      : "#c7d1cb",
+    boxShadow: dark
+      ? "0 20px 50px rgba(0,0,0,0.25)"
+      : "0 12px 35px rgba(0,0,0,0.08)",
+  }}
+>
+  <div className="mb-4 flex items-center justify-between">
+    <div>
+      <h2 className="text-base font-bold">
+        🎙️ AI Voice Assistant
+      </h2>
+
+      <p
+        className="mt-1 text-[10px]"
+        style={{
+          color: dark
+            ? "#7f8b84"
+            : "#6b756f",
+        }}
+      >
+        Give a command and let the AI Manager assign it to the right agent.
+      </p>
+    </div>
+
+    <div
+      className="rounded-full px-3 py-1 text-[9px] font-semibold"
+      style={{
+        backgroundColor:
+          assistantLog.systemControl === "Active"
+            ? dark
+              ? "#12301f"
+              : "#e2f8ea"
+            : dark
+            ? "#1a1f1c"
+            : "#eef2ef",
+        color:
+          assistantLog.systemControl === "Active"
+            ? "#39ff88"
+            : dark
+            ? "#89958d"
+            : "#69756e",
+      }}
+    >
+      ● System Control: {assistantLog.systemControl}
+    </div>
+  </div>
+
+  <div className="flex gap-3">
+    
+      <input
+  type="text"
+  value={assistantCommand}
+  onChange={(e) => setAssistantCommand(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      runAssistant();
+    }
+  }}
+  placeholder="e.g. Create a new website for the company"
+  className="flex-1 rounded-xl border px-4 py-3 text-xs outline-none"
+  style={{
+    backgroundColor: dark
+      ? "#0b0e0c"
+      : "#f5f7f6",
+    borderColor: dark
+      ? "#303a35"
+      : "#d1d9d4",
+    color: dark
+      ? "#ffffff"
+      : "#17201b",
+  }}
+/>
+     
+
+    <button
+      type="button"
+      onClick={runAssistant}
+      disabled={isAssistantListening}
+      className="rounded-xl px-5 py-3 text-xs font-bold transition hover:scale-[1.02]"
+      style={{
+        backgroundColor: "#39ff88",
+        color: "#061009",
+        opacity: isAssistantListening ? 0.6 : 1,
+      }}
+    >
+      {isAssistantListening
+        ? "Processing..."
+        : "🎤 Send Command"}
+    </button>
+  </div>
+
+   {/* ASSISTANT ACTIVITY */}
+
+  <div className="mt-5 grid gap-3 md:grid-cols-4">
+
+    {/* YOU SAID */}
+
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        backgroundColor: dark
+          ? "#151b18"
+          : "#f6f8f7",
+        borderColor: dark
+          ? "#303a35"
+          : "#d7ded9",
+      }}
+    >
+      <p className="text-[10px] font-semibold text-blue-400">
+        🎤 YOU SAID
+      </p>
+
+      <p className="mt-2 text-xs">
+        {assistantLog.command ||
+          "Waiting for command..."}
+      </p>
+    </div>
+
+    {/* UNDERSTOOD */}
+
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        backgroundColor: dark
+          ? "#151b18"
+          : "#f6f8f7",
+        borderColor: dark
+          ? "#303a35"
+          : "#d7ded9",
+      }}
+    >
+      <p className="text-[10px] font-semibold text-purple-400">
+        🧠 UNDERSTOOD
+      </p>
+
+      <p className="mt-2 text-xs">
+        {assistantLog.understood ||
+          "Waiting for command..."}
+      </p>
+    </div>
+
+    {/* ASSIGNED TO */}
+
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        backgroundColor: dark
+          ? "#151b18"
+          : "#f6f8f7",
+        borderColor: dark
+          ? "#303a35"
+          : "#d7ded9",
+      }}
+    >
+      <p className="text-[10px] font-semibold text-green-400">
+        🤖 ASSIGNED TO
+      </p>
+
+      <p className="mt-2 text-xs font-semibold">
+        {assistantLog.assignedTo ||
+          "No agent assigned"}
+      </p>
+    </div>
+
+    {/* AGENT REPLY */}
+
+    <div
+      className="rounded-2xl border p-4"
+      style={{
+        backgroundColor: dark
+          ? "#151b18"
+          : "#f6f8f7",
+        borderColor: dark
+          ? "#303a35"
+          : "#d7ded9",
+      }}
+    >
+      <p className="text-[10px] font-semibold text-yellow-400">
+        ✅ AGENT REPLY
+      </p>
+
+      <p className="mt-2 text-xs">
+        {assistantLog.response ||
+          "No task completed yet."}
+      </p>
+    </div>
+
+  </div>
+</div>
+
+
+ {/* ========================= */}
       {/* HEADER */}
+      {/* ========================= */}
+
       <div
         className="relative mb-5 flex items-center justify-between rounded-2xl border px-5 py-4"
         style={{
-          backgroundColor: dark ? "#111412" : "#ffffff",
-          borderColor: dark ? "#26302b" : "#d7ded9",
+          backgroundColor: dark
+            ? "#111412"
+            : "#ffffff",
+          borderColor: dark
+            ? "#26302b"
+            : "#d7ded9",
         }}
       >
-        <div>
-          <div className="flex items-center gap-3">
-            <div
-              className="flex h-9 w-9 items-center justify-center rounded-lg"
+        <div className="flex items-center gap-3">
+          <div
+            className="flex h-9 w-9 items-center justify-center rounded-lg"
+            style={{
+              backgroundColor: "#39ff88",
+              color: "#061009",
+            }}
+          >
+            ✦
+          </div>
+
+          <div>
+            <h1 className="text-lg font-bold">
+              AI Virtual Office
+            </h1>
+
+            <p
+              className="text-xs"
               style={{
-                backgroundColor: "#39ff88",
-                color: "#061009",
+                color: dark
+                  ? "#7f8b84"
+                  : "#6b756f",
               }}
             >
-              ✦
-            </div>
-
-            <div>
-              <h1 className="text-lg font-bold">
-                AI Virtual Office
-              </h1>
-
-              <p
-                className="text-xs"
-                style={{
-                  color: dark ? "#7f8b84" : "#6b756f",
-                }}
-              >
-                Live AI workforce environment
-              </p>
-            </div>
+              Live AI workforce environment
+            </p>
           </div>
         </div>
 
@@ -217,11 +640,19 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           <div
             className="rounded-lg border px-3 py-2 text-xs"
             style={{
-              backgroundColor: dark ? "#151a17" : "#f5f7f6",
-              borderColor: dark ? "#26302b" : "#d7ded9",
+              backgroundColor: dark
+                ? "#151a17"
+                : "#f5f7f6",
+              borderColor: dark
+                ? "#26302b"
+                : "#d7ded9",
             }}
           >
-            <span style={{ color: "#39ff88" }}>
+            <span
+              style={{
+                color: "#39ff88",
+              }}
+            >
               ●
             </span>{" "}
             Office Online
@@ -229,7 +660,9 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
 
           <button
             type="button"
-            onClick={() => setShowHireForm(true)}
+            onClick={() =>
+              setShowHireForm(true)
+            }
             className="rounded-lg px-4 py-2 text-xs font-semibold"
             style={{
               backgroundColor: "#39ff88",
@@ -240,7 +673,10 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           </button>
         </div>
 
+        {/* ========================= */}
         {/* HIRE FORM */}
+        {/* ========================= */}
+
         {showHireForm && (
           <div
             className="absolute right-5 top-16 z-50 w-80 rounded-2xl border p-5 shadow-2xl"
@@ -287,7 +723,6 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               </button>
             </div>
 
-            {/* NAME */}
             <label className="mb-1 block text-[10px] font-semibold">
               Employee Name
             </label>
@@ -312,7 +747,6 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               }}
             />
 
-            {/* ROLE */}
             <label className="mb-1 block text-[10px] font-semibold">
               Role
             </label>
@@ -335,15 +769,24 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
                   : "#17201b",
               }}
             >
-              <option>Developer Agent</option>
-              <option>Design Agent</option>
-              <option>Research Agent</option>
+              <option>
+                Developer Agent
+              </option>
+              <option>
+                Design Agent
+              </option>
+              <option>
+                Research Agent
+              </option>
               <option>HR Agent</option>
-              <option>Finance Agent</option>
-              <option>Marketing Agent</option>
+              <option>
+                Finance Agent
+              </option>
+              <option>
+                Marketing Agent
+              </option>
             </select>
 
-            {/* DEPARTMENT */}
             <label className="mb-1 block text-[10px] font-semibold">
               Department
             </label>
@@ -373,7 +816,6 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               <option>HR</option>
             </select>
 
-            {/* STATUS */}
             <label className="mb-1 block text-[10px] font-semibold">
               Status
             </label>
@@ -418,36 +860,80 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
         )}
       </div>
 
+
+      {/* ========================= */}
       {/* OFFICE */}
+      {/* ========================= */}
+
       <div
         className="relative overflow-hidden rounded-3xl border"
         style={{
           height: "650px",
-          backgroundColor: dark ? "#151b19" : "#dce5df",
-          borderColor: dark ? "#303a35" : "#c5d0c9",
+          backgroundColor: dark
+            ? "#151b19"
+            : "#dce5df",
+          borderColor: dark
+            ? "#303a35"
+            : "#c5d0c9",
           boxShadow: dark
             ? "0 30px 80px rgba(0,0,0,0.45)"
             : "0 20px 50px rgba(0,0,0,0.12)",
         }}
       >
         {/* FLOOR GRID */}
+
         <div
           className="absolute inset-0"
           style={{
             backgroundImage: dark
               ? `
-                linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)
+                linear-gradient(
+                  rgba(255,255,255,0.025) 1px,
+                  transparent 1px
+                ),
+                linear-gradient(
+                  90deg,
+                  rgba(255,255,255,0.025) 1px,
+                  transparent 1px
+                )
               `
               : `
-                linear-gradient(rgba(0,0,0,0.035) 1px, transparent 1px),
-                linear-gradient(90deg, rgba(0,0,0,0.035) 1px, transparent 1px)
+                linear-gradient(
+                  rgba(0,0,0,0.035) 1px,
+                  transparent 1px
+                ),
+                linear-gradient(
+                  90deg,
+                  rgba(0,0,0,0.035) 1px,
+                  transparent 1px
+                )
               `,
             backgroundSize: "32px 32px",
           }}
         />
 
+        {/* DECORATIVE PATHS */}
+
+        <div
+          className="absolute left-[31%] top-[18%] h-[26%] w-[1px]"
+          style={{
+            backgroundColor: dark
+              ? "#344039"
+              : "#b7c3bc",
+          }}
+        />
+
+        <div
+          className="absolute left-[65%] top-[18%] h-[26%] w-[1px]"
+          style={{
+            backgroundColor: dark
+              ? "#344039"
+              : "#b7c3bc",
+          }}
+        />
+
         {/* MANAGEMENT */}
+
         <OfficeRoom
           title="Management"
           department="Management"
@@ -456,9 +942,11 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           )}
           dark={dark}
           onEmployeeClick={setSelectedEmployee}
+          animationOffset={0}
         />
 
         {/* DEVELOPMENT */}
+
         <OfficeRoom
           title="Development Lab"
           department="Development"
@@ -467,9 +955,11 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           )}
           dark={dark}
           onEmployeeClick={setSelectedEmployee}
+          animationOffset={1}
         />
 
         {/* RESEARCH */}
+
         <OfficeRoom
           title="Research Department"
           department="Research"
@@ -478,9 +968,13 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           )}
           dark={dark}
           onEmployeeClick={setSelectedEmployee}
+          animationOffset={2}
         />
 
+        {/* ========================= */}
         {/* CORRIDOR */}
+        {/* ========================= */}
+
         <div
           className="absolute left-0 right-0 top-[45%]"
           style={{
@@ -489,14 +983,18 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               ? "#0d110f"
               : "#cfd9d3",
             borderTop: `1px solid ${
-              dark ? "#303a35" : "#bac7bf"
+              dark
+                ? "#303a35"
+                : "#bac7bf"
             }`,
             borderBottom: `1px solid ${
-              dark ? "#303a35" : "#bac7bf"
+              dark
+                ? "#303a35"
+                : "#bac7bf"
             }`,
           }}
         >
-          <div className="flex h-full items-center justify-center gap-3">
+          <div className="relative flex h-full items-center justify-center gap-3">
             <span
               className="rounded-full px-4 py-1 text-[10px]"
               style={{
@@ -509,20 +1007,64 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               MAIN CORRIDOR
             </span>
 
-            <span
-              className="text-[10px]"
-              style={{
-                color: dark
-                  ? "#69756e"
-                  : "#758078",
-              }}
-            >
-              AI Workforce Area
-            </span>
+            <button
+  type="button"
+  onClick={() => {
+    const workforce =
+      employees
+        .map(
+          (employee) =>
+            `${employee.name} — ${employee.role} — ${employee.status}`
+        )
+        .join("\n");
+
+    alert(
+      `AI WORKFORCE\n\n${workforce}\n\nTotal Employees: ${employees.length}\nWorking: ${workingCount}\nAvailable: ${availableCount}\nIdle: ${idleCount}`
+    );
+  }}
+  className="rounded-full px-4 py-1 text-[10px] font-semibold transition hover:scale-105"
+  style={{
+    backgroundColor: dark
+      ? "#18211c"
+      : "#e6ece8",
+    color: "#39ff88",
+    border: `1px solid ${
+      dark
+        ? "#2d4035"
+        : "#c4d2c9"
+    }`,
+    cursor: "pointer",
+  }}
+>
+  AI Workforce Area
+</button>
+
+
           </div>
+
+          {/* WALKING DOTS */}
+
+          <div
+            className="absolute left-[12%] top-1/2 h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: "#39ff88",
+              boxShadow:
+                "0 0 8px #39ff88",
+            }}
+          />
+
+          <div
+            className="absolute right-[15%] top-1/2 h-1.5 w-1.5 rounded-full"
+            style={{
+              backgroundColor: "#39ff88",
+              boxShadow:
+                "0 0 8px #39ff88",
+            }}
+          />
         </div>
 
         {/* CREATIVE */}
+
         <OfficeRoom
           title="Creative Studio"
           department="Creative"
@@ -532,19 +1074,25 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
           dark={dark}
           bottom
           onEmployeeClick={setSelectedEmployee}
+          animationOffset={3}
         />
 
         {/* HR */}
+
         <OfficeRoom
           title="HR & Operations"
           department="HR"
-          employees={getDepartmentEmployees("HR")}
+          employees={getDepartmentEmployees(
+            "HR"
+          )}
           dark={dark}
           bottom
           onEmployeeClick={setSelectedEmployee}
+          animationOffset={4}
         />
 
         {/* OFFICE STATUS */}
+
         <div
           className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full border px-4 py-1.5 text-[9px]"
           style={{
@@ -566,7 +1114,10 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
         </div>
       </div>
 
+      {/* ========================= */}
       {/* EMPLOYEE LEGEND */}
+      {/* ========================= */}
+
       <div className="mt-4 flex flex-wrap gap-3">
         {employees.map((employee) => (
           <button
@@ -612,7 +1163,10 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
         ))}
       </div>
 
+      {/* ========================= */}
       {/* EMPLOYEE DETAILS */}
+      {/* ========================= */}
+
       {selectedEmployee && (
         <div
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-5"
@@ -697,6 +1251,7 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
                           : dark
                           ? "#181d1a"
                           : "#f3f6f4",
+
                       color:
                         selectedEmployee.status ===
                         item
@@ -704,10 +1259,10 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
                           : dark
                           ? "#ffffff"
                           : "#17201b",
-                      borderColor:
-                        dark
-                          ? "#303a35"
-                          : "#d1d9d4",
+
+                      borderColor: dark
+                        ? "#303a35"
+                        : "#d1d9d4",
                     }}
                   >
                     {item}
@@ -716,44 +1271,39 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
               </div>
             </div>
 
-            <div className="mt-5 flex gap-2">
-              <button
-                type="button"
-                onClick={() =>
-                  setSelectedEmployee(null)
-                }
-                className="flex-1 rounded-lg border px-3 py-2 text-xs"
-                style={{
-                  borderColor: dark
-                    ? "#303a35"
-                    : "#d1d9d4",
-                  color: dark
-                    ? "#ffffff"
-                    : "#17201b",
-                }}
-              >
-                Close
-              </button>
+           <div className="mt-5 flex gap-2">
+  <button
+    type="button"
+    onClick={() =>
+      setSelectedEmployee(null)
+    }
+    className="flex-1 rounded-lg border px-3 py-2 text-xs"
+    style={{
+      borderColor: dark
+        ? "#303a35"
+        : "#d1d9d4",
+      color: dark
+        ? "#ffffff"
+        : "#17201b",
+    }}
+  >
+    Close
+  </button>
 
-              {selectedEmployee.id > 5 && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    fireEmployee(
-                      selectedEmployee.id
-                    )
-                  }
-                  className="rounded-lg px-3 py-2 text-xs font-semibold"
-                  style={{
-                    backgroundColor:
-                      "#ff5c5c",
-                    color: "#ffffff",
-                  }}
-                >
-                  Fire
-                </button>
-              )}
-            </div>
+  <button
+    type="button"
+    onClick={() =>
+      fireEmployee(selectedEmployee.id)
+    }
+    className="rounded-lg px-3 py-2 text-xs font-semibold"
+    style={{
+      backgroundColor: "#ff5c5c",
+      color: "#ffffff",
+    }}
+  >
+    Fire
+  </button>
+</div>
           </div>
         </div>
       )}
@@ -761,9 +1311,9 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
   );
 }
 
-/* ============================= */
+/* ================================= */
 /* OFFICE ROOM */
-/* ============================= */
+/* ================================= */
 
 function OfficeRoom({
   title,
@@ -772,6 +1322,7 @@ function OfficeRoom({
   dark,
   bottom = false,
   onEmployeeClick,
+  animationOffset,
 }: {
   title: string;
   department: string;
@@ -781,51 +1332,54 @@ function OfficeRoom({
   onEmployeeClick: (
     employee: Employee
   ) => void;
+  animationOffset: number;
 }) {
   const roomEmployees = employees.slice(0, 4);
+
+  let left: string | undefined;
+  let right: string | undefined;
+
+  if (
+    department === "Management" ||
+    department === "Creative"
+  ) {
+    left = "2%";
+  }
+
+  if (
+    department === "Research" ||
+    department === "HR"
+  ) {
+    right = "2%";
+  }
+
+  if (department === "Development") {
+    left = "33%";
+  }
+
+  const width =
+    department === "Management" ||
+    department === "Research"
+      ? "30%"
+      : department === "Development"
+      ? "32%"
+      : "43%";
 
   return (
     <div
       className="absolute rounded-xl border p-4"
       style={{
-        left:
-          department === "Management"
-            ? "2%"
-            : department === "Development"
-            ? "33%"
-            : department === "Research"
-            ? undefined
-            : department === "Creative"
-            ? "2%"
-            : undefined,
-
-        right:
-          department === "Research" ||
-          department === "HR"
-            ? "2%"
-            : undefined,
-
-        top:
-          !bottom ? "3%" : undefined,
-
-        bottom:
-          bottom ? "3%" : undefined,
-
-        width:
-          department === "Management" ||
-          department === "Research"
-            ? "30%"
-            : department === "Development"
-            ? "32%"
-            : "43%",
-
-        height:
-          bottom ? "35%" : "43%",
-
+        left,
+        right,
+        top: !bottom ? "3%" : undefined,
+        bottom: bottom ? "3%" : undefined,
+        width,
+        height: bottom
+          ? "35%"
+          : "43%",
         backgroundColor: dark
           ? "#19201d"
           : "#e9efeb",
-
         borderColor: dark
           ? "#39443e"
           : "#bdc9c1",
@@ -850,17 +1404,22 @@ function OfficeRoom({
           Ready for new employee
         </div>
       ) : (
-        roomEmployees.map((employee, index) => (
-          <Desk
-            key={employee.id}
-            employee={employee}
-            index={index}
-            dark={dark}
-            onClick={() =>
-              onEmployeeClick(employee)
-            }
-          />
-        ))
+        roomEmployees.map(
+          (employee, index) => (
+            <Desk
+              key={employee.id}
+              employee={employee}
+              index={index}
+              dark={dark}
+              onClick={() =>
+                onEmployeeClick(employee)
+              }
+              animationIndex={
+                animationOffset + index
+              }
+            />
+          )
+        )
       )}
 
       <div
@@ -893,9 +1452,9 @@ function OfficeRoom({
   );
 }
 
-/* ============================= */
+/* ================================= */
 /* ROOM TITLE */
-/* ============================= */
+/* ================================= */
 
 function RoomTitle({
   title,
@@ -920,20 +1479,22 @@ function RoomTitle({
   );
 }
 
-/* ============================= */
-/* DESK */
-/* ============================= */
+/* ================================= */
+/* DESK + WALKING EMPLOYEE */
+/* ================================= */
 
 function Desk({
   employee,
   index,
   dark,
   onClick,
+  animationIndex,
 }: {
   employee: Employee;
   index: number;
   dark: boolean;
   onClick: () => void;
+  animationIndex: number;
 }) {
   const positions = [
     {
@@ -957,19 +1518,88 @@ function Desk({
   const position =
     positions[index % positions.length];
 
+  const animationNames = [
+    "walkAround1",
+    "walkAround2",
+    "walkAround3",
+    "walkAround4",
+  ];
+
+  const animationName =
+    animationNames[
+      animationIndex %
+        animationNames.length
+    ];
+
+  const animationDuration =
+    7 + (animationIndex % 4);
+
+  const animationDelay =
+    -(animationIndex * 1.7);
+
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="absolute text-left transition hover:scale-105"
+    <div
+      className="absolute"
       style={{
         left: position.left,
         top: position.top,
       }}
     >
+      {/* MOVING EMPLOYEE */}
+
+      <button
+        type="button"
+        onClick={onClick}
+        className="office-walker absolute left-1/2 z-20 -translate-x-1/2"
+        style={{
+          top: "-48px",
+          animationName,
+          animationDuration: `${animationDuration}s`,
+          animationDelay: `${animationDelay}s`,
+        }}
+      >
+        <div
+          className="flex h-10 w-10 items-center justify-center rounded-full border text-3xl transition hover:scale-125"
+          style={{
+            backgroundColor: dark
+              ? "#111613"
+              : "#ffffff",
+            borderColor: dark
+              ? "#39443e"
+              : "#c0cbc4",
+          }}
+        >
+          {employee.avatar}
+        </div>
+
+        {/* STATUS DOT */}
+
+        <span
+          className="absolute right-0 top-0 h-2.5 w-2.5 rounded-full"
+          style={{
+            backgroundColor:
+              employee.status ===
+              "Idle"
+                ? "#7d8781"
+                : employee.status ===
+                  "Working"
+                ? "#39ff88"
+                : "#60A5FA",
+            boxShadow:
+              employee.status ===
+              "Idle"
+                ? "none"
+                : "0 0 8px currentColor",
+          }}
+        />
+      </button>
+
       {/* DESK */}
-      <div
-        className="relative flex h-20 w-28 items-end justify-center rounded-lg border pb-1"
+
+      <button
+        type="button"
+        onClick={onClick}
+        className="employee-shadow relative flex h-20 w-28 items-end justify-center rounded-lg border pb-1 transition hover:scale-[1.03]"
         style={{
           backgroundColor: dark
             ? "#101512"
@@ -980,6 +1610,7 @@ function Desk({
         }}
       >
         {/* MONITOR */}
+
         <div
           className="absolute left-1/2 top-2 flex h-7 w-12 -translate-x-1/2 items-center justify-center rounded border text-[10px]"
           style={{
@@ -991,12 +1622,17 @@ function Desk({
               : "#aebbb3",
           }}
         >
-          <span style={{ color: "#39ff88" }}>
+          <span
+            style={{
+              color: "#39ff88",
+            }}
+          >
             ▰
           </span>
         </div>
 
         {/* KEYBOARD */}
+
         <div
           className="absolute bottom-4 left-1/2 h-1.5 w-7 -translate-x-1/2 rounded"
           style={{
@@ -1006,13 +1642,20 @@ function Desk({
           }}
         />
 
-        {/* EMPLOYEE */}
-        <div className="absolute -top-9 left-1/2 -translate-x-1/2 text-3xl">
-          {employee.avatar}
-        </div>
-      </div>
+        {/* DESK OBJECT */}
+
+        <div
+          className="absolute bottom-2 right-3 h-2 w-2 rounded-full"
+          style={{
+            backgroundColor:
+              "#39ff88",
+            opacity: 0.7,
+          }}
+        />
+      </button>
 
       {/* NAME */}
+
       <div className="mt-1 w-28 text-center">
         <p className="truncate text-[9px] font-semibold">
           {employee.name}
@@ -1022,18 +1665,27 @@ function Desk({
           className="text-[8px]"
           style={{
             color:
-              employee.status === "Idle"
+              employee.status ===
+              "Idle"
                 ? dark
                   ? "#77827b"
                   : "#69746e"
-                : "#39ff88",
+                : employee.status ===
+                  "Working"
+                ? "#39ff88"
+                : "#60A5FA",
           }}
         >
           {employee.status}
         </p>
       </div>
-    </button>
+    </div>
   );
 }
+
+
+
+  
+  
 
 export default VirtualOffice;
