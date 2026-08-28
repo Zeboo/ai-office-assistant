@@ -113,53 +113,156 @@ const [isAssistantListening, setIsAssistantListening] =
     useState(false);
 
 const runAssistant = () => {
+
+  if (assistantLog.systemControl === "Inactive") {
+  alert("Please activate System Control first.");
+  return;
+}
   if (!assistantCommand.trim()) {
+
+    
     return;
   }
 
+
   setIsAssistantListening(true);
+  setAssistantLog((current) => ({
+  ...current,
+  systemControl: "Active",
+}));
 
   setTimeout(() => {
     const command = assistantCommand.trim();
 
     let assignedTo = "AI Manager";
-    let understood = "General office task";
+  let understood = "General office command";
     let response = "Task received and processed.";
 
     if (
-      command.toLowerCase().includes("website") ||
-      command.toLowerCase().includes("code") ||
-      command.toLowerCase().includes("developer")
+    command.includes("website") ||
+command.includes("web site") ||
+command.includes("code") ||
+command.includes("developer") ||
+command.includes("ویب سائٹ") ||
+command.includes("کوڈ")
     ) {
       assignedTo = "Developer Agent";
       understood = "Website development task";
       response =
         "Developer Agent received the task and is working on it.";
     } else if (
-      command.toLowerCase().includes("research") ||
-      command.toLowerCase().includes("search")
+      
+command.includes("research") ||
+command.includes("search") ||
+command.includes("ریسرچ") ||
+command.includes("تحقیق") ||
+command.includes("تلاش")
+
     ) {
       assignedTo = "Research Agent";
       understood = "Research and information gathering task";
       response =
         "Research Agent received the task and started processing.";
     } else if (
-      command.toLowerCase().includes("design") ||
-      command.toLowerCase().includes("ui")
+     
+command.includes("design") ||
+command.includes("ui") ||
+command.includes("ڈیزائن") ||
+command.includes("یو آئی")
+
     ) {
       assignedTo = "Design Agent";
       understood = "UI / creative design task";
       response =
         "Design Agent received the task and started working.";
     } else if (
-      command.toLowerCase().includes("employee") ||
-      command.toLowerCase().includes("hr")
+    
+command.includes("employee") ||
+command.includes("hr") ||
+command.includes("hire") ||
+command.includes("ملازم") ||
+command.includes("بھرتی") ||
+command.includes("نیا ملازم")
+
     ) {
       assignedTo = "HR Agent";
       understood = "Employee / HR related task";
       response =
         "HR Agent received the task and is processing it.";
-    }
+        }
+        else if (
+  command.includes("finance") ||
+  command.includes("money") ||
+  command.includes("payment") ||
+  command.includes("budget") ||
+  command.includes("فنانس") ||
+  command.includes("پیسے") ||
+  command.includes("ادائیگی") ||
+  command.includes("بجٹ")
+) {
+  assignedTo = "Finance Agent";
+  understood = "Finance / payment related task";
+  response =
+    "Finance Agent received the task and is processing it.";
+}
+
+else if (
+  command.includes("calendar") ||
+  command.includes("meeting") ||
+  command.includes("schedule") ||
+  command.includes("appointment") ||
+  command.includes("کیلنڈر") ||
+  command.includes("میٹنگ") ||
+  command.includes("شیڈول") ||
+  command.includes("ملاقات")
+) {
+  assignedTo = "Calendar Agent";
+  understood = "Meeting / calendar scheduling task";
+  response =
+    "Calendar Agent received the task and is processing it.";
+}
+
+else if (
+  command.includes("email") ||
+  command.includes("mail") ||
+  command.includes("ای میل") ||
+  command.includes("میل") ||
+  command.includes("ایمیل")
+) {
+  assignedTo = "Email Agent";
+  understood = "Email related task";
+  response =
+    "Email Agent received the task and is processing it.";
+}
+
+else if (
+  command.includes("social media") ||
+  command.includes("social") ||
+  command.includes("facebook") ||
+  command.includes("instagram") ||
+  command.includes("سوشل میڈیا") ||
+  command.includes("سوشل") ||
+  command.includes("فیس بک") ||
+  command.includes("انسٹاگرام")
+) {
+  assignedTo = "Social Media Agent";
+  understood = "Social media related task";
+  response =
+    "Social Media Agent received the task and is processing it.";
+}
+
+else if (
+  command.includes("manager") ||
+  command.includes("manage") ||
+  command.includes("manager agent") ||
+  command.includes("منیجر") ||
+  command.includes("انتظام")
+) {
+  assignedTo = "AI Manager";
+  understood = "Office management and task coordination";
+  response =
+    "AI Manager received the task and is coordinating it.";
+}
 
     setAssistantLog({
       command,
@@ -173,7 +276,114 @@ const runAssistant = () => {
   }, 800);
 };
 
+
+const startVoiceCommand = () => {
+
+if (assistantLog.systemControl === "Inactive") {
+  alert("System Control is Inactive. Please activate it first.");
+  return;
+}
+
+  const SpeechRecognition =
+    (window as any).SpeechRecognition ||
+    (window as any).webkitSpeechRecognition;
+
+  if (!SpeechRecognition) {
+    alert(
+      "Voice recognition is not supported in this browser. Please use Google Chrome."
+    );
+    return;
+  }
+
+  const recognition = new SpeechRecognition();
+recognition.lang = "ur-PK";
+  recognition.continuous = false;
+  recognition.interimResults = false;
+
+  setIsAssistantListening(true);
+
+  recognition.onresult = (event: any) => {
+  const spokenText =
+    event.results[0][0].transcript.trim();
+
+  const command = spokenText.toLowerCase();
+
+  setAssistantCommand(spokenText);
+
+  let assignedTo = "AI Manager";
+  let understood = "General office command";
+  let response = "AI Manager received your command.";
+
+  if (
+    command.includes("website") ||
+    command.includes("code") ||
+    command.includes("developer") ||
+    command.includes("ویب سائٹ") ||
+    command.includes("کوڈ") ||
+    command.includes("ڈیویلپر")
+  ) {
+    assignedTo = "Developer Agent";
+    understood = "Website / development command";
+    response =
+      "Developer Agent has received the voice command.";
+  } else if (
+    command.includes("research") ||
+    command.includes("search") ||
+    command.includes("ریسرچ") ||
+    command.includes("تلاش") ||
+    command.includes("تحقیق")
+  ) {
+    assignedTo = "Research Agent";
+    understood = "Research and information gathering command";
+    response =
+      "Research Agent has received the voice command.";
+  } else if (
+    command.includes("design") ||
+    command.includes("ui") ||
+    command.includes("ڈیزائن")
+  ) {
+    assignedTo = "Design Agent";
+    understood = "UI / design command";
+    response =
+      "Design Agent has received the voice command.";
+  } else if (
+    command.includes("employee") ||
+    command.includes("hr") ||
+    command.includes("ملازم") ||
+    command.includes("ایچ آر")
+  ) {
+    assignedTo = "HR Agent";
+    understood = "Employee / HR command";
+    response =
+      "HR Agent has received the voice command.";
+  }
+
+  setAssistantLog({
+    command: spokenText,
+    understood,
+    assignedTo,
+    response,
+    systemControl: "Active",
+  });
+
+  setIsAssistantListening(false);
+};
+
+  recognition.onerror = () => {
+    setIsAssistantListening(false);
+  };
+
+  recognition.onend = () => {
+    setIsAssistantListening(false);
+  };
+
+  recognition.start();
+};
+
+
   const hireEmployee = () => {
+
+    
     if (!name.trim()) {
       return;
     }
@@ -424,8 +634,18 @@ const runAssistant = () => {
       </p>
     </div>
 
-    <div
-      className="rounded-full px-3 py-1 text-[9px] font-semibold"
+       <button
+      type="button"
+      onClick={() =>
+        setAssistantLog((current) => ({
+          ...current,
+          systemControl:
+            current.systemControl === "Active"
+              ? "Inactive"
+              : "Active",
+        }))
+      }
+      className="rounded-full px-3 py-1 text-[9px] font-semibold transition hover:scale-105"
       style={{
         backgroundColor:
           assistantLog.systemControl === "Active"
@@ -444,8 +664,10 @@ const runAssistant = () => {
       }}
     >
       ● System Control: {assistantLog.systemControl}
-    </div>
+    </button>
   </div>
+
+ 
 
   <div className="flex gap-3">
     
@@ -477,7 +699,7 @@ const runAssistant = () => {
 
     <button
       type="button"
-      onClick={runAssistant}
+     onClick={startVoiceCommand}
       disabled={isAssistantListening}
       className="rounded-xl px-5 py-3 text-xs font-bold transition hover:scale-[1.02]"
       style={{
@@ -490,6 +712,21 @@ const runAssistant = () => {
         ? "Processing..."
         : "🎤 Send Command"}
     </button>
+
+    <button
+      type="button"
+      onClick={startVoiceCommand}
+      disabled={isAssistantListening}
+      className="rounded-xl px-5 py-3 text-xs font-bold transition hover:scale-[1.02]"
+      style={{
+        backgroundColor: "#39ff88",
+        color: "#061009",
+        opacity: isAssistantListening ? 0.6 : 1,
+      }}
+    >
+      {isAssistantListening ? "Listening..." : "🎙️ Voice Command"}
+    </button>
+
   </div>
 
    {/* ASSISTANT ACTIVITY */}
@@ -1010,6 +1247,8 @@ const runAssistant = () => {
             <button
   type="button"
   onClick={() => {
+
+
     const workforce =
       employees
         .map(
