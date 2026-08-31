@@ -136,7 +136,20 @@ const runAssistant = () => {
 
     let assignedTo = "AI Manager";
   let understood = "General office command";
-    let response = "Task received and processed.";
+    let response = "AI Manager received your command.";
+
+if (
+  command.includes("chrome") ||
+  command.includes("کروم") ||
+  command.includes("کروم کھولو") ||
+command.includes("کروم کھول دو") ||
+  command.includes("browser") ||
+  command.includes("براؤزر")
+) {
+  assignedTo = "Computer Agent";
+  understood = "Open browser command";
+  response = "Computer Agent received the command to open the browser.";
+}
 
     if (
     command.includes("website") ||
@@ -314,49 +327,101 @@ recognition.lang = "ur-PK";
   let understood = "General office command";
   let response = "AI Manager received your command.";
 
-  if (
-    command.includes("website") ||
-    command.includes("code") ||
-    command.includes("developer") ||
-    command.includes("ویب سائٹ") ||
-    command.includes("کوڈ") ||
-    command.includes("ڈیویلپر")
-  ) {
+ if (
+  command.includes("website") ||
+  command.includes("web") ||
+  command.includes("code") ||
+  command.includes("developer") ||
+  command.includes("ویب") ||
+  command.includes("ویب سائٹ") ||
+  command.includes("کوڈ") ||
+  command.includes("ڈیولپر") ||
+  command.includes("ڈویلپر") ||
+  command.includes("بنا دو") ||
+  command.includes("بناؤ")
+) {
     assignedTo = "Developer Agent";
     understood = "Website / development command";
     response =
       "Developer Agent has received the voice command.";
   } else if (
-    command.includes("research") ||
-    command.includes("search") ||
-    command.includes("ریسرچ") ||
-    command.includes("تلاش") ||
-    command.includes("تحقیق")
-  ) {
+  command.includes("research") ||
+  command.includes("search") ||
+  command.includes("ریسرچ") ||
+  command.includes("تحقیق") ||
+  command.includes("تلاش") ||
+  command.includes("سرچ") ||
+  command.includes("معلومات") 
+) {
     assignedTo = "Research Agent";
     understood = "Research and information gathering command";
     response =
       "Research Agent has received the voice command.";
   } else if (
-    command.includes("design") ||
-    command.includes("ui") ||
-    command.includes("ڈیزائن")
-  ) {
+  command.includes("design") ||
+  command.includes("ui") ||
+  command.includes("ڈیزائن") ||
+  command.includes("ڈیزائن کرو") ||
+  command.includes("یو آئی") ||
+  command.includes("انٹرفیس") ||
+  command.includes("لے آؤٹ") ||
+  command.includes("خوبصورت بنا دو")
+) {
     assignedTo = "Design Agent";
     understood = "UI / design command";
     response =
       "Design Agent has received the voice command.";
   } else if (
-    command.includes("employee") ||
-    command.includes("hr") ||
-    command.includes("ملازم") ||
-    command.includes("ایچ آر")
-  ) {
+  command.includes("employee") ||
+  command.includes("hr") ||
+  
+  command.includes("ملازم") ||
+  command.includes("ملازمین") ||
+  command.includes("ایچ آر") ||
+  command.includes("بھرتی") ||
+  command.includes("ہائر") ||
+  command.includes("نوکری") ||
+  command.includes("اسٹاف")
+) {
     assignedTo = "HR Agent";
-    understood = "Employee / HR command";
-    response =
-      "HR Agent has received the voice command.";
+understood = "Employee / HR related task";
+response =
+  "HR Agent received the task and is processing it.";
   }
+
+
+else if (
+  command.includes("finance") ||
+  command.includes("پیسے") ||
+  command.includes("مالی") ||
+  command.includes("اکاؤنٹ") ||
+  command.includes("بجٹ") ||
+  command.includes("خرچہ") ||
+  command.includes("اخراجات") ||
+  command.includes("آمدنی")
+) {
+  assignedTo = "Finance Agent";
+  understood = "Finance and accounting task";
+  response =
+    "Finance Agent has received the voice command and is processing it.";
+}
+
+
+else if (
+  command.includes("calendar") ||
+  command.includes("meeting") ||
+  command.includes("ملاقات") ||
+  command.includes("میٹنگ") ||
+  command.includes("اجلاس") ||
+  command.includes("کیلنڈر") ||
+  command.includes("وقت مقرر") ||
+  command.includes("اپائنٹمنٹ")
+) {
+  assignedTo = "Calendar Agent";
+  understood = "Meeting and calendar management task";
+  response =
+    "Calendar Agent has received the voice command and is processing it.";
+}
 
   setAssistantLog({
     command: spokenText,
