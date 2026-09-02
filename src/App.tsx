@@ -310,10 +310,10 @@ const [notifications, setNotifications] = useState([
             <Projects colors={colors} />
 
           ) : activeMenu === "Calendar" ? (
-            <Calendar />
+           <Calendar themeMode={themeMode} />
 
           ) : activeMenu === "Team" ? (
-            <Team />
+          <Team themeMode={themeMode} />
 
 ) : activeMenu === "Documents" ? (
   <Documents themeMode={themeMode} />

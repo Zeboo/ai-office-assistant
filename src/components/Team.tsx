@@ -26,10 +26,13 @@ type Employee = {
   status: "Active" | "On Leave";
 };
 
-function Team() {
-  const [dark, setDark] = useState(true);
-
-  const theme = dark ? darkColors : lightColors;
+function Team({
+  themeMode,
+}: {
+  themeMode: "dark" | "light";
+}) {
+  const theme = themeMode === "dark" ? darkColors : lightColors;
+  const dark = themeMode === "dark";
 
   const [search, setSearch] = useState("");
   const [department, setDepartment] = useState("All");
@@ -265,19 +268,7 @@ function Team() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* THEME */}
-          <button
-            type="button"
-            onClick={() => setDark((value) => !value)}
-            className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
-            style={{
-              backgroundColor: theme.surface,
-              borderColor: theme.border,
-              color: theme.text,
-            }}
-          >
-            {dark ? "☀️ Light" : "🌙 Dark"}
-          </button>
+          
 
           {/* ADD EMPLOYEE */}
           <button

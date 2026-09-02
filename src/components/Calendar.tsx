@@ -27,12 +27,14 @@ type CalendarEvent = {
   ai: boolean;
   date: string;
 };
-
-function Calendar() {
-  // Theme
-  const [dark, setDark] = useState(true);
-
-  const theme = dark ? darkColors : lightColors;
+function Calendar({
+  themeMode,
+}: {
+  themeMode: "dark" | "light";
+}) {
+ // Theme
+const theme = themeMode === "dark" ? darkColors : lightColors;
+const dark = themeMode === "dark";
 
   // Calendar state
   const [currentMonth, setCurrentMonth] = useState(7);
@@ -290,19 +292,7 @@ function Calendar() {
         </div>
 
         <div className="flex items-center gap-3">
-          {/* THEME TOGGLE */}
-          <button
-            type="button"
-            onClick={() => setDark((value) => !value)}
-            className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
-            style={{
-              backgroundColor: theme.surface,
-              borderColor: theme.border,
-              color: theme.text,
-            }}
-          >
-            {dark ? "☀️ Light" : "🌙 Dark"}
-          </button>
+          
 
           <button
             type="button"
