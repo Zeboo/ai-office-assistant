@@ -1,4 +1,3 @@
-
 export type ThemeMode = "dark" | "light";
 
 export const darkColors = {
@@ -18,12 +17,17 @@ export const lightColors = {
   surface: "#FFFFFF",
   surfaceLight: "#EEF1F4",
   primary: "#16A34A",
-  black: "#FFFFFF",
+  black: "#000000",
   text: "#111827",
   textSecondary: "#4B5563",
   textMuted: "#6B7280",
   border: "#D9DEE5",
 };
 
-// Default colors — keeps existing components working
+// Default theme
 export const colors = darkColors;
+
+// Get colors according to selected theme
+export const getColors = (theme: ThemeMode) => {
+  return theme === "dark" ? darkColors : lightColors;
+};

@@ -19,8 +19,7 @@ import {
   Download,
   FolderPlus,
 } from "lucide-react";
-
-import { colors } from "../theme/colors";
+import { darkColors, lightColors } from "../theme/colors";
 
 type DocumentItem = {
   id: number;
@@ -37,8 +36,13 @@ type FolderItem = {
   name: string;
   count: number;
 };
-
-function Documents() {
+function Documents({
+  themeMode,
+}: {
+  themeMode: "dark" | "light";
+}) {
+  const colors =
+    themeMode === "dark" ? darkColors : lightColors;
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const [documents, setDocuments] = useState<DocumentItem[]>([

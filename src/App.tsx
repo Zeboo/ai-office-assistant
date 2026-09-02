@@ -315,9 +315,8 @@ const [notifications, setNotifications] = useState([
           ) : activeMenu === "Team" ? (
             <Team />
 
-          ) : activeMenu === "Documents" ? (
-            <Documents />
-
+) : activeMenu === "Documents" ? (
+  <Documents themeMode={themeMode} />
           ) : activeMenu === "AI Agents" ? (
             <AIAgents />
 
