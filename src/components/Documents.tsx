@@ -335,12 +335,7 @@ function Documents() {
     setShowNewFolder(false);
   };
 
-  const handleAskAI = () => {
-    setAiMessage(
-      "Document Agent is ready. It can summarize, analyze and organize your documents."
-    );
-  };
-
+  
   const handleDownload = (document: DocumentItem) => {
     alert(
       `Download requested for "${document.name}". Backend file storage will be connected later.`
