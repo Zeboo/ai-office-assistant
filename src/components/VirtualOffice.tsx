@@ -541,6 +541,9 @@ else if (
   return (
     <div
       className="min-h-screen overflow-hidden p-6"
+
+
+      
       style={{
         backgroundColor: dark
           ? "#080a09"
@@ -550,6 +553,192 @@ else if (
           : "#17201b",
       }}
     >
+    {/* PC CONTROL */}
+<h2 className="text-base font-bold">
+  🖥️ PC Control
+</h2>
+<p
+  className="mt-1 text-[10px]"
+  style={{
+    color: dark ? "#7f8b84" : "#6b756f",
+  }}
+>
+  Control your computer using AI voice commands.
+</p>
+<span
+  className="rounded-full px-3 py-1 text-[9px] font-semibold"
+  style={{
+    backgroundColor: dark ? "#12301f" : "#e2f8ea",
+    color: "#39ff88",
+  }}
+>
+  ● Ready
+</span>
+<div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Open Chrome",
+      understood: "Open browser command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to open Chrome.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  🌐 Open Chrome
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Open Notepad",
+      understood: "Open Notepad command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to open Notepad.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  📝 Open Notepad
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Open Calculator",
+      understood: "Open Calculator command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to open Calculator.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  🧮 Open Calculator
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Open File Explorer",
+      understood: "Open File Explorer command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to open File Explorer.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  📁 Open File Explorer
+</button>
+
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Lock PC",
+      understood: "Lock computer command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to lock the PC.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  🔒 Lock PC
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Restart PC",
+      understood: "Restart computer command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to restart the PC.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  🔄 Restart PC
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Shutdown PC",
+      understood: "Shutdown computer command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the command to shut down the PC.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  ⏻ Shutdown PC
+</button>
+
+<button
+  type="button"
+  onClick={() => {
+    setAssistantLog({
+      command: "Volume Control",
+      understood: "Computer volume control command",
+      assignedTo: "Computer Agent",
+      response: "Computer Agent received the volume control command.",
+      systemControl: "Active",
+    });
+  }}
+  className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
+  style={{
+    backgroundColor: dark ? "#151b18" : "#f6f8f7",
+    borderColor: dark ? "#303a35" : "#d7ded9",
+  }}
+>
+  🔊 Volume Control
+</button>
+
+</div>
+
       {/* ========================= */}
       {/* MOVEMENT ANIMATIONS */}
       {/* ========================= */}
