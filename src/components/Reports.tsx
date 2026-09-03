@@ -1,3 +1,5 @@
+
+import { useMemo, useState } from "react";
 import {
   BarChart3,
   Download,
@@ -7,41 +9,222 @@ import {
   Clock3,
   Bot,
   CalendarDays,
+  Search,
+  Plus,
+  X,
+  Trash2,
+  Eye,
+  RefreshCw,
 } from "lucide-react";
 
-import { colors } from "../theme/colors";
+import { darkColors, lightColors } from "../theme/colors";
 
-function Reports() {
-  const reports = [
+type ReportStatus = "Ready" | "Processing";
+
+type Report = {
+  id: number;
+  title: string;
+  type: string;
+  date: string;
+  status: ReportStatus;
+  agent: string;
+  description: string;
+};
+
+function Reports({
+  themeMode,
+}: {
+  themeMode: "dark" | "light";
+}) {
+  const colors = themeMode === "dark" ? darkColors : lightColors;
+  const dark = themeMode === "dark";
+
+  const [reports, setReports] = useState<Report[]>([
     {
+      id: 1,
       title: "Weekly Productivity Report",
       type: "Productivity",
       date: "Aug 18, 2026",
       status: "Ready",
       agent: "Analytics Agent",
+      description:
+        "A detailed overview of workspace productivity, completed tasks, activity levels, and weekly performance.",
     },
     {
+      id: 2,
       title: "Project Performance Report",
       type: "Project",
       date: "Aug 17, 2026",
       status: "Ready",
       agent: "Manager Agent",
+      description:
+        "Project progress report covering active projects, completion rates, milestones, and overall project health.",
     },
     {
+      id: 3,
       title: "AI Agent Activity Report",
       type: "AI Analytics",
       date: "Aug 16, 2026",
       status: "Ready",
       agent: "Analytics Agent",
+      description:
+        "AI agent activity including tasks executed, accuracy, successful actions, and agent performance.",
     },
     {
+      id: 4,
       title: "Team Performance Report",
       type: "Team",
       date: "Aug 15, 2026",
       status: "Processing",
       agent: "Manager Agent",
+      description:
+        "Team performance analysis including productivity, completed work, workload distribution, and collaboration.",
     },
-  ];
+  ]);
+
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<"All" | ReportStatus>(
+    "All",
+  );
+  const [typeFilter, setTypeFilter] = useState("All");
+
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showViewModal, setShowViewModal] = useState(false);
+
+  const [selectedReport, setSelectedReport] =
+    useState<Report | null>(null);
+
+  const [newTitle, setNewTitle] = useState("");
+  const [newType, setNewType] = useState("Productivity");
+  const [newAgent, setNewAgent] = useState("Analytics Agent");
+
+  const reportTypes = useMemo(() => {
+    return ["All", ...Array.from(new Set(reports.map((report) => report.type)))];
+  }, [reports]);
+
+  const filteredReports = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    return reports.filter((report) => {
+      const matchesSearch =
+        !query ||
+        report.title.toLowerCase().includes(query) ||
+        report.type.toLowerCase().includes(query) ||
+        report.agent.toLowerCase().includes(query);
+
+      const matchesStatus =
+        statusFilter === "All" || report.status === statusFilter;
+
+      const matchesType =
+        typeFilter === "All" || report.type === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [reports, search, statusFilter, typeFilter]);
+
+  const totalReports = reports.length;
+  const generatedReports = reports.filter(
+    (report) => report.status === "Ready",
+  ).length;
+  const processingReports = reports.filter(
+    (report) => report.status === "Processing",
+  ).length;
+
+  const openReport = (report: Report) => {
+    setSelectedReport(report);
+    setShowViewModal(true);
+  };
+
+  const deleteReport = (id: number) => {
+    setReports((current) =>
+      current.filter((report) => report.id !== id),
+    );
+
+    if (selectedReport?.id === id) {
+      setSelectedReport(null);
+      setShowViewModal(false);
+    }
+  };
+
+  const downloadReport = (report: Report) => {
+    const content = [
+      `Report: ${report.title}`,
+      `Type: ${report.type}`,
+      `Date: ${report.date}`,
+      `Status: ${report.status}`,
+      `Agent: ${report.agent}`,
+      "",
+      report.description,
+    ].join("\n");
+
+    const blob = new Blob([content], {
+      type: "text/plain;charset=utf-8",
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `${report.title.replace(/\s+/g, "-").toLowerCase()}.txt`;
+
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    URL.revokeObjectURL(url);
+  };
+
+  const createReport = () => {
+    if (!newTitle.trim()) return;
+
+    const newReport: Report = {
+      id: Date.now(),
+      title: newTitle.trim(),
+      type: newType,
+      date: "Aug 19, 2026",
+      status: "Processing",
+      agent: newAgent,
+      description:
+        "This report is being generated by the selected AI agent. The report will become available when processing is complete.",
+    };
+
+    setReports((current) => [newReport, ...current]);
+
+    setNewTitle("");
+    setNewType("Productivity");
+    setNewAgent("Analytics Agent");
+    setShowCreateModal(false);
+
+    setTimeout(() => {
+      setReports((current) =>
+        current.map((report) =>
+          report.id === newReport.id
+            ? {
+                ...report,
+                status: "Ready",
+                description:
+                  "The AI-generated report has been completed successfully and is ready to review.",
+              }
+            : report,
+        ),
+      );
+    }, 1800);
+  };
+
+  const refreshProcessing = () => {
+    setReports((current) =>
+      current.map((report) =>
+        report.status === "Processing"
+          ? {
+              ...report,
+              status: "Ready",
+              description:
+                "The AI-generated report has been completed successfully and is ready to review.",
+            }
+          : report,
+      ),
+    );
+  };
 
   return (
     <div
@@ -80,16 +263,35 @@ function Reports() {
           </div>
         </div>
 
-        <button
-          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
-          style={{
-            backgroundColor: colors.primary,
-            color: colors.black,
-          }}
-        >
-          <Download size={17} />
-          Export Report
-        </button>
+        <div className="flex items-center gap-3">
+          {processingReports > 0 && (
+            <button
+              type="button"
+              onClick={refreshProcessing}
+              className="flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
+              style={{
+                backgroundColor: colors.surfaceLight,
+                color: colors.text,
+              }}
+            >
+              <RefreshCw size={16} />
+              Complete Processing
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setShowCreateModal(true)}
+            className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
+            style={{
+              backgroundColor: colors.primary,
+              color: colors.black,
+            }}
+          >
+            <Plus size={17} />
+            New Report
+          </button>
+        </div>
       </div>
 
       {/* SUMMARY */}
@@ -111,7 +313,7 @@ function Reports() {
           </p>
 
           <p className="mt-2 text-3xl font-bold">
-            32
+            {totalReports}
           </p>
         </div>
 
@@ -137,7 +339,7 @@ function Reports() {
               color: colors.primary,
             }}
           >
-            28
+            {generatedReports}
           </p>
         </div>
 
@@ -154,11 +356,11 @@ function Reports() {
               color: colors.textMuted,
             }}
           >
-            This Week
+            Processing
           </p>
 
           <p className="mt-2 text-3xl font-bold">
-            7
+            {processingReports}
           </p>
         </div>
 
@@ -326,6 +528,82 @@ function Reports() {
         </div>
       </div>
 
+      {/* SEARCH + FILTERS */}
+      <div
+        className="mb-5 flex items-center justify-between gap-4 rounded-2xl border p-4"
+        style={{
+          backgroundColor: colors.surface,
+          borderColor: colors.border,
+        }}
+      >
+        <div
+          className="flex flex-1 items-center gap-3 rounded-xl border px-4 py-3"
+          style={{
+            backgroundColor: colors.surfaceLight,
+            borderColor: colors.border,
+          }}
+        >
+          <Search
+            size={17}
+            style={{
+              color: colors.textMuted,
+            }}
+          />
+
+          <input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search reports..."
+            className="w-full bg-transparent text-sm outline-none"
+            style={{
+              color: colors.text,
+            }}
+          />
+        </div>
+
+        <div className="flex items-center gap-2">
+          {["All", "Ready", "Processing"].map((status) => (
+            <button
+              key={status}
+              type="button"
+              onClick={() =>
+                setStatusFilter(status as "All" | ReportStatus)
+              }
+              className="rounded-xl px-4 py-2 text-xs font-semibold"
+              style={{
+                backgroundColor:
+                  statusFilter === status
+                    ? colors.primary
+                    : colors.surfaceLight,
+                color:
+                  statusFilter === status
+                    ? colors.black
+                    : colors.textSecondary,
+              }}
+            >
+              {status}
+            </button>
+          ))}
+        </div>
+
+        <select
+          value={typeFilter}
+          onChange={(event) => setTypeFilter(event.target.value)}
+          className="rounded-xl border px-4 py-2.5 text-xs outline-none"
+          style={{
+            backgroundColor: colors.surfaceLight,
+            borderColor: colors.border,
+            color: colors.text,
+          }}
+        >
+          {reportTypes.map((type) => (
+            <option key={type} value={type}>
+              {type}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* REPORT LIST */}
       <section
         className="overflow-hidden rounded-2xl border"
@@ -363,114 +641,473 @@ function Reports() {
           />
         </div>
 
-        {reports.map((report) => (
+        {filteredReports.length === 0 ? (
+          <div className="px-6 py-12 text-center">
+            <FileText
+              size={32}
+              className="mx-auto mb-3"
+              style={{
+                color: colors.textMuted,
+              }}
+            />
+
+            <p className="text-sm font-semibold">
+              No reports found
+            </p>
+
+            <p
+              className="mt-1 text-xs"
+              style={{
+                color: colors.textMuted,
+              }}
+            >
+              Try changing your search or filters.
+            </p>
+          </div>
+        ) : (
+          filteredReports.map((report) => (
+            <div
+              key={report.id}
+              className="flex items-center justify-between border-b px-6 py-5 last:border-b-0"
+              style={{
+                borderColor: colors.border,
+              }}
+            >
+              <div className="flex items-center gap-4">
+                <div
+                  className="flex h-10 w-10 items-center justify-center rounded-xl"
+                  style={{
+                    backgroundColor: dark
+                      ? "rgba(57,255,136,0.10)"
+                      : "rgba(22,163,74,0.10)",
+                  }}
+                >
+                  <FileText
+                    size={19}
+                    style={{
+                      color: colors.primary,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <h3 className="text-sm font-semibold">
+                    {report.title}
+                  </h3>
+
+                  <div className="mt-1 flex items-center gap-3">
+                    <span
+                      className="text-[10px]"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      {report.type}
+                    </span>
+
+                    <span
+                      className="flex items-center gap-1 text-[10px]"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      <CalendarDays size={11} />
+                      {report.date}
+                    </span>
+
+                    <span
+                      className="flex items-center gap-1 text-[10px]"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      <Bot size={11} />
+                      {report.agent}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <span
+                  className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-semibold"
+                  style={{
+                    backgroundColor:
+                      report.status === "Ready"
+                        ? dark
+                          ? "rgba(57,255,136,0.10)"
+                          : "rgba(22,163,74,0.10)"
+                        : colors.surfaceLight,
+                    color:
+                      report.status === "Ready"
+                        ? colors.primary
+                        : colors.textMuted,
+                  }}
+                >
+                  {report.status === "Ready" ? (
+                    <CheckCircle2 size={12} />
+                  ) : (
+                    <Clock3 size={12} />
+                  )}
+
+                  {report.status}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => openReport(report)}
+                  className="flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    color: colors.text,
+                  }}
+                >
+                  <Eye size={14} />
+                  View
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => downloadReport(report)}
+                  disabled={report.status !== "Ready"}
+                  className="rounded-xl p-2 disabled:cursor-not-allowed disabled:opacity-40"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    color: colors.textMuted,
+                  }}
+                >
+                  <Download size={15} />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => deleteReport(report.id)}
+                  className="rounded-xl p-2"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    color: colors.textMuted,
+                  }}
+                >
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            </div>
+          ))
+        )}
+      </section>
+
+      {/* CREATE REPORT MODAL */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
           <div
-            key={report.title}
-            className="flex items-center justify-between border-b px-6 py-5 last:border-b-0"
+            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl"
             style={{
+              backgroundColor: colors.surface,
               borderColor: colors.border,
             }}
           >
-            <div className="flex items-center gap-4">
-              <div
-                className="flex h-10 w-10 items-center justify-center rounded-xl"
-                style={{
-                  backgroundColor:
-                    "rgba(57,255,136,0.10)",
-                }}
-              >
-                <FileText
-                  size={19}
-                  style={{
-                    color: colors.primary,
-                  }}
-                />
-              </div>
-
+            <div className="mb-6 flex items-center justify-between">
               <div>
-                <h3 className="text-sm font-semibold">
-                  {report.title}
-                </h3>
+                <h2 className="text-lg font-bold">
+                  Generate New Report
+                </h2>
 
-                <div className="mt-1 flex items-center gap-3">
-                  <span
-                    className="text-[10px]"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    {report.type}
-                  </span>
-
-                  <span
-                    className="flex items-center gap-1 text-[10px]"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    <CalendarDays size={11} />
-                    {report.date}
-                  </span>
-
-                  <span
-                    className="flex items-center gap-1 text-[10px]"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    <Bot size={11} />
-                    {report.agent}
-                  </span>
-                </div>
+                <p
+                  className="mt-1 text-xs"
+                  style={{
+                    color: colors.textMuted,
+                  }}
+                >
+                  Choose the report details and AI agent.
+                </p>
               </div>
-            </div>
-
-            <div className="flex items-center gap-4">
-              <span
-                className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-[10px] font-semibold"
-                style={{
-                  backgroundColor:
-                    report.status === "Ready"
-                      ? "rgba(57,255,136,0.10)"
-                      : colors.surfaceLight,
-                  color:
-                    report.status === "Ready"
-                      ? colors.primary
-                      : colors.textMuted,
-                }}
-              >
-                {report.status === "Ready" ? (
-                  <CheckCircle2 size={12} />
-                ) : (
-                  <Clock3 size={12} />
-                )}
-
-                {report.status}
-              </span>
 
               <button
-                className="rounded-xl px-4 py-2 text-xs font-semibold"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                  color: colors.text,
-                }}
-              >
-                View
-              </button>
-
-              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
                 className="rounded-xl p-2"
                 style={{
                   backgroundColor: colors.surfaceLight,
                   color: colors.textMuted,
                 }}
               >
-                <Download size={15} />
+                <X size={17} />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label
+                  className="mb-2 block text-xs font-semibold"
+                  style={{
+                    color: colors.textSecondary,
+                  }}
+                >
+                  Report Title
+                </label>
+
+                <input
+                  value={newTitle}
+                  onChange={(event) => setNewTitle(event.target.value)}
+                  placeholder="e.g. Monthly Performance Report"
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                />
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-xs font-semibold"
+                  style={{
+                    color: colors.textSecondary,
+                  }}
+                >
+                  Report Type
+                </label>
+
+                <select
+                  value={newType}
+                  onChange={(event) => setNewType(event.target.value)}
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                >
+                  <option>Productivity</option>
+                  <option>Project</option>
+                  <option>AI Analytics</option>
+                  <option>Team</option>
+                  <option>Finance</option>
+                </select>
+              </div>
+
+              <div>
+                <label
+                  className="mb-2 block text-xs font-semibold"
+                  style={{
+                    color: colors.textSecondary,
+                  }}
+                >
+                  AI Agent
+                </label>
+
+                <select
+                  value={newAgent}
+                  onChange={(event) => setNewAgent(event.target.value)}
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                  style={{
+                    backgroundColor: colors.surfaceLight,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                >
+                  <option>Analytics Agent</option>
+                  <option>Manager Agent</option>
+                  <option>Research Agent</option>
+                </select>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => setShowCreateModal(false)}
+                className="rounded-xl px-5 py-3 text-sm font-semibold"
+                style={{
+                  backgroundColor: colors.surfaceLight,
+                  color: colors.textSecondary,
+                }}
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={createReport}
+                disabled={!newTitle.trim()}
+                className="rounded-xl px-5 py-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors.black,
+                }}
+              >
+                Generate Report
               </button>
             </div>
           </div>
-        ))}
-      </section>
+        </div>
+      )}
+
+      {/* VIEW REPORT MODAL */}
+      {showViewModal && selectedReport && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div
+            className="w-full max-w-2xl rounded-2xl border p-6 shadow-2xl"
+            style={{
+              backgroundColor: colors.surface,
+              borderColor: colors.border,
+            }}
+          >
+            <div className="mb-6 flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div
+                  className="flex h-11 w-11 items-center justify-center rounded-xl"
+                  style={{
+                    backgroundColor: dark
+                      ? "rgba(57,255,136,0.10)"
+                      : "rgba(22,163,74,0.10)",
+                  }}
+                >
+                  <FileText
+                    size={21}
+                    style={{
+                      color: colors.primary,
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <h2 className="text-lg font-bold">
+                    {selectedReport.title}
+                  </h2>
+
+                  <p
+                    className="mt-1 text-xs"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    {selectedReport.type} • {selectedReport.date}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setShowViewModal(false)}
+                className="rounded-xl p-2"
+                style={{
+                  backgroundColor: colors.surfaceLight,
+                  color: colors.textMuted,
+                }}
+              >
+                <X size={17} />
+              </button>
+            </div>
+
+            <div
+              className="rounded-xl border p-5"
+              style={{
+                backgroundColor: colors.surfaceLight,
+                borderColor: colors.border,
+              }}
+            >
+              <div className="mb-4 grid grid-cols-3 gap-4">
+                <div>
+                  <p
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Status
+                  </p>
+
+                  <p
+                    className="mt-1 text-sm font-semibold"
+                    style={{
+                      color: colors.primary,
+                    }}
+                  >
+                    {selectedReport.status}
+                  </p>
+                </div>
+
+                <div>
+                  <p
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    AI Agent
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold">
+                    {selectedReport.agent}
+                  </p>
+                </div>
+
+                <div>
+                  <p
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Type
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold">
+                    {selectedReport.type}
+                  </p>
+                </div>
+              </div>
+
+              <div
+                className="border-t pt-4"
+                style={{
+                  borderColor: colors.border,
+                }}
+              >
+                <p
+                  className="text-xs leading-6"
+                  style={{
+                    color: colors.textSecondary,
+                  }}
+                >
+                  {selectedReport.description}
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => deleteReport(selectedReport.id)}
+                className="flex items-center gap-2 rounded-xl px-4 py-3 text-xs font-semibold"
+                style={{
+                  backgroundColor: colors.surfaceLight,
+                  color: colors.textSecondary,
+                }}
+              >
+                <Trash2 size={14} />
+                Delete
+              </button>
+
+              <button
+                type="button"
+                onClick={() => downloadReport(selectedReport)}
+                disabled={selectedReport.status !== "Ready"}
+                className="flex items-center gap-2 rounded-xl px-5 py-3 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-40"
+                style={{
+                  backgroundColor: colors.primary,
+                  color: colors.black,
+                }}
+              >
+                <Download size={14} />
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

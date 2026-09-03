@@ -318,13 +318,12 @@ const [notifications, setNotifications] = useState([
 ) : activeMenu === "Documents" ? (
   <Documents themeMode={themeMode} />
           ) : activeMenu === "AI Agents" ? (
-            <AIAgents />
-
+           <AIAgents themeMode={themeMode} />
           ) : activeMenu === "Workflows" ? (
-            <Workflows />
+<Workflows themeMode={themeMode} />
 
                     ) : activeMenu === "Reports" ? (
-            <Reports />
+            <Reports themeMode={themeMode} />
 
           ) : activeMenu === "Settings" ? (
             <Settings
