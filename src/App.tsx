@@ -44,30 +44,35 @@ function App() {
 
   const [showNotifications, setShowNotifications] = useState(false);
 
-const [notifications, setNotifications] = useState([
+const [notifications, setNotifications] = useState<
   {
-    id: 1,
-    title: "Research Agent completed task",
-    message: "Market research has been completed.",
-    time: "2m ago",
-    unread: true,
-  },
-  {
-    id: 2,
-    title: "Document Agent generated report",
-    message: "Project report is ready.",
-    time: "8m ago",
-    unread: true,
-  },
-  {
-    id: 3,
-    title: "Calendar Agent scheduled meeting",
-    message: "Client meeting has been scheduled.",
-    time: "15m ago",
-    unread: false,
-  },
-]);
+    id: number;
+    title: string;
+    message: string;
+    time: string;
+    unread: boolean;
+  }[]
+>([]);
 
+useEffect(() => {
+  fetch("http://localhost:3000/notifications")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load notifications");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setNotifications(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load notifications:",
+        error
+      );
+    });
+}, []);
   const [copilotMessage, setCopilotMessage] = useState("");
 
   const menuItems = [
@@ -164,6 +169,110 @@ const stats = [
     icon: FolderKanban,
   },
 ];
+
+const [growthPoints, setGrowthPoints] = useState({
+  percentage: 0,
+  title: "",
+  message: "",
+});
+
+useEffect(() => {
+  fetch("http://localhost:3000/productivity/growth")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load growth points");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setGrowthPoints(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load growth points:",
+        error
+      );
+    });
+}, []);
+
+
+const [activeGoals, setActiveGoals] = useState<
+  {
+    title: string;
+    progress: number;
+  }[]
+>([]);
+
+useEffect(() => {
+  fetch("http://localhost:3000/goals/active")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load active goals");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setActiveGoals(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load active goals:",
+        error
+      );
+    });
+}, []);
+
+const [recentActivity, setRecentActivity] = useState<
+  {
+    agent: string;
+    action: string;
+    time: string;
+  }[]
+>([]);
+
+useEffect(() => {
+  fetch("http://localhost:3000/activity/recent")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load recent activity");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setRecentActivity(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load recent activity:",
+        error
+      );
+    });
+}, []);
+
+
+useEffect(() => {
+  fetch("http://localhost:3000/notifications")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load notifications");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setNotifications(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load notifications:",
+        error
+      );
+    });
+}, []);
+
   const openCopilot = () => {
     const message = aiCommand.trim();
 
@@ -494,16 +603,36 @@ const stats = [
 
         <button
           type="button"
-         onClick={() => {
-  setNotifications((current) =>
-    current.map((item) => ({
-      ...item,
-      unread: false,
-    }))
-  );
+        
+onClick={async () => {
+  try {
+    const response = await fetch(
+      "http://localhost:3000/notifications/read-all",
+      {
+        method: "PATCH",
+      }
+    );
 
-  setShowNotifications(false);
+    if (!response.ok) {
+      throw new Error("Failed to mark notifications as read");
+    }
+
+    setNotifications((current) =>
+      current.map((item) => ({
+        ...item,
+        unread: false,
+      }))
+    );
+
+    setShowNotifications(false);
+  } catch (error) {
+    console.error(
+      "Failed to mark notifications as read:",
+      error
+    );
+  }
 }}
+
           className="text-[10px] font-semibold"
           style={{
             color: colors.primary,
@@ -897,7 +1026,7 @@ const stats = [
                         color: colors.primary,
                       }}
                     >
-                      82%
+                     {growthPoints.percentage}%
                     </p>
 
                     <p
@@ -906,7 +1035,7 @@ const stats = [
                         color: colors.textMuted,
                       }}
                     >
-                      Productivity this week
+                    {growthPoints.title}
                     </p>
 
                     <div
@@ -932,7 +1061,7 @@ const stats = [
                         color: colors.textSecondary,
                       }}
                     >
-                      You're performing better than last week.
+                      {growthPoints.message}
                     </p>
                   </section>
                 </div>
@@ -973,54 +1102,41 @@ const stats = [
                     </div>
 
                     <div className="mt-5 space-y-4">
-                      {[
-                        [
-                          "Complete AI Office MVP",
-                          "75%",
-                        ],
-                        [
-                          "Client Onboarding",
-                          "60%",
-                        ],
-                        [
-                          "Improve Productivity",
-                          "90%",
-                        ],
-                      ].map(([goal, progress]) => (
-                        <div key={goal}>
-                          <div className="mb-2 flex justify-between">
-                            <span className="text-sm">
-                              {goal}
-                            </span>
+                     {activeGoals.map((goal) => (
+  <div key={goal.title}>
+    <div className="mb-2 flex justify-between">
+      <span className="text-sm">
+        {goal.title}
+      </span>
 
-                            <span
-                              className="text-xs"
-                              style={{
-                                color: colors.primary,
-                              }}
-                            >
-                              {progress}
-                            </span>
-                          </div>
+      <span
+        className="text-xs"
+        style={{
+          color: colors.primary,
+        }}
+      >
+        {goal.progress}%
+      </span>
+    </div>
 
-                          <div
-                            className="h-1.5 rounded-full"
-                            style={{
-                              backgroundColor:
-                                colors.surfaceLight,
-                            }}
-                          >
-                            <div
-                              className="h-full rounded-full"
-                              style={{
-                                width: progress,
-                                backgroundColor:
-                                  colors.primary,
-                              }}
-                            />
-                          </div>
-                        </div>
-                      ))}
+    <div
+      className="h-1.5 rounded-full"
+      style={{
+        backgroundColor:
+          colors.surfaceLight,
+      }}
+    >
+      <div
+        className="h-full rounded-full"
+        style={{
+          width: `${goal.progress}%`,
+          backgroundColor:
+            colors.primary,
+        }}
+      />
+    </div>
+  </div>
+))}
                     </div>
                   </section>
 
@@ -1057,71 +1173,59 @@ const stats = [
                     </div>
 
                     <div className="mt-5 space-y-3">
-                      {[
-                        [
-                          "Research Agent",
-                          "Completed market research",
-                          "2m ago",
-                        ],
-                        [
-                          "Document Agent",
-                          "Generated project report",
-                          "8m ago",
-                        ],
-                        [
-                          "Calendar Agent",
-                          "Scheduled client meeting",
-                          "15m ago",
-                        ],
-                      ].map(([agent, action, time]) => (
-                        <div
-                          key={agent}
-                          className="flex items-center gap-3 rounded-xl p-3"
-                          style={{
-                            backgroundColor:
-                              colors.surfaceLight,
-                          }}
-                        >
-                          <div
-                            className="flex h-8 w-8 items-center justify-center rounded-lg"
-                            style={{
-                              backgroundColor:
-                                "rgba(57,255,136,0.10)",
-                            }}
-                          >
-                            <Bot
-                              size={15}
-                              style={{
-                                color: colors.primary,
-                              }}
-                            />
-                          </div>
+                     
+{recentActivity.map(
+  ({ agent, action, time }) => (
+    <div
+      key={agent}
+      className="flex items-center gap-3 rounded-xl p-3"
+      style={{
+        backgroundColor:
+          colors.surfaceLight,
+      }}
+    >
+      <div
+        className="flex h-8 w-8 items-center justify-center rounded-lg"
+        style={{
+          backgroundColor:
+            "rgba(57,255,136,0.10)",
+        }}
+      >
+        <Bot
+          size={15}
+          style={{
+            color: colors.primary,
+          }}
+        />
+      </div>
 
-                          <div className="min-w-0 flex-1">
-                            <p className="text-xs font-semibold">
-                              {agent}
-                            </p>
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-semibold">
+          {agent}
+        </p>
 
-                            <p
-                              className="truncate text-xs"
-                              style={{
-                                color: colors.textMuted,
-                              }}
-                            >
-                              {action}
-                            </p>
-                          </div>
+        <p
+          className="truncate text-xs"
+          style={{
+            color: colors.textMuted,
+          }}
+        >
+          {action}
+        </p>
+      </div>
 
-                          <span
-                            className="text-[10px]"
-                            style={{
-                              color: colors.textMuted,
-                            }}
-                          >
-                            {time}
-                          </span>
-                        </div>
-                      ))}
+      <span
+        className="text-[10px]"
+        style={{
+          color: colors.textMuted,
+        }}
+      >
+        {time}
+      </span>
+    </div>
+  )
+)}
+
                     </div>
                   </section>
                 </div>
