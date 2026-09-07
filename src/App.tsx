@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   Sparkles,
@@ -83,33 +83,87 @@ const [notifications, setNotifications] = useState([
     { name: "Reports", icon: BarChart3 },
   ];
 
-  const stats = [
-    {
-      title: "Current Score",
-      value: "1,820",
-      change: "+12.5%",
-      icon: Target,
-    },
-    {
-      title: "Active Tasks",
-      value: "24",
-      change: "+4 today",
-      icon: CheckSquare,
-    },
-    {
-      title: "AI Agents",
-      value: "8",
-      change: "6 active",
-      icon: Bot,
-    },
-    {
-      title: "Projects",
-      value: "12",
-      change: "3 due soon",
-      icon: FolderKanban,
-    },
-  ];
+ const [dashboardStats, setDashboardStats] = useState({
+  currentScore: 0,
+  activeTasks: 0,
+  aiAgents: 0,
+  projects: 0,
+});
 
+useEffect(() => {
+  fetch("http://localhost:3000/dashboard/stats")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load dashboard stats");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setDashboardStats(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load dashboard stats:",
+        error
+      );
+    });
+}, []);
+
+const [schedule, setSchedule] = useState<
+  {
+    time: string;
+    title: string;
+    detail: string;
+  }[]
+>([]);
+
+useEffect(() => {
+  fetch("http://localhost:3000/calendar/schedule")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load schedule");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      setSchedule(data);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load schedule:",
+        error
+      );
+    });
+}, []);
+
+const stats = [
+  {
+    title: "Current Score",
+    value: dashboardStats.currentScore.toLocaleString(),
+    change: "+12.5%",
+    icon: Target,
+  },
+  {
+    title: "Active Tasks",
+    value: dashboardStats.activeTasks.toString(),
+    change: "+4 today",
+    icon: CheckSquare,
+  },
+  {
+    title: "AI Agents",
+    value: dashboardStats.aiAgents.toString(),
+    change: "6 active",
+    icon: Bot,
+  },
+  {
+    title: "Projects",
+    value: dashboardStats.projects.toString(),
+    change: "3 due soon",
+    icon: FolderKanban,
+  },
+];
   const openCopilot = () => {
     const message = aiCommand.trim();
 
@@ -765,65 +819,54 @@ const [notifications, setNotifications] = useState([
                     </div>
 
                     <div className="mt-6 space-y-3">
-                      {[
-                        [
-                          "10:00 AM",
-                          "Team Standup",
-                          "15 members",
-                        ],
-                        [
-                          "12:30 PM",
-                          "Client Meeting",
-                          "ABC Project",
-                        ],
-                        [
-                          "03:00 PM",
-                          "Project Review",
-                          "AI Office",
-                        ],
-                      ].map(([time, title, detail]) => (
-                        <div
-                          key={title}
-                          className="flex items-center gap-4 rounded-xl p-4"
-                          style={{
-                            backgroundColor:
-                              colors.surfaceLight,
-                          }}
-                        >
-                          <div className="w-20">
-                            <p
-                              className="text-xs font-semibold"
-                              style={{
-                                color: colors.primary,
-                              }}
-                            >
-                              {time}
-                            </p>
-                          </div>
+                     
 
-                          <div className="flex-1">
-                            <p className="text-sm font-semibold">
-                              {title}
-                            </p>
+{schedule.map(
+  ({ time, title, detail }) => (
+    <div
+      key={title}
+      className="flex items-center gap-4 rounded-xl p-4"
+      style={{
+        backgroundColor:
+          colors.surfaceLight,
+      }}
+    >
+      <div className="w-20">
+        <p
+          className="text-xs font-semibold"
+          style={{
+            color: colors.primary,
+          }}
+        >
+          {time}
+        </p>
+      </div>
 
-                            <p
-                              className="mt-1 text-xs"
-                              style={{
-                                color: colors.textMuted,
-                              }}
-                            >
-                              {detail}
-                            </p>
-                          </div>
+      <div className="flex-1">
+        <p className="text-sm font-semibold">
+          {title}
+        </p>
 
-                          <Clock3
-                            size={16}
-                            style={{
-                              color: colors.textMuted,
-                            }}
-                          />
-                        </div>
-                      ))}
+        <p
+          className="mt-1 text-xs"
+          style={{
+            color: colors.textMuted,
+          }}
+        >
+          {detail}
+        </p>
+      </div>
+
+      <Clock3
+        size={16}
+        style={{
+          color: colors.textMuted,
+        }}
+      />
+    </div>
+  )
+)}
+
                     </div>
                   </section>
 
