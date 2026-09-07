@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 type AssistantLog = {
   command: string;
   understood: string;
@@ -81,6 +81,17 @@ function VirtualOffice({ themeMode }: VirtualOfficeProps) {
 
   const [employees, setEmployees] =
     useState<Employee[]>(initialEmployees);
+
+      useEffect(() => {
+    fetch("http://localhost:3000/employees")
+      .then((response) => response.json())
+      .then((data: Employee[]) => {
+        setEmployees(data);
+      })
+      .catch((error) => {
+        console.error("Failed to load employees:", error);
+      });
+  }, []);
 
   const [showHireForm, setShowHireForm] = useState(false);
 
@@ -446,28 +457,52 @@ else if (
 };
 
 
-  const hireEmployee = () => {
+const hireEmployee = async () => {
 
-    
-    if (!name.trim()) {
-      return;
+  console.log("Hire Employee clicked");
+
+  alert("Name: " + name);
+
+  if (!name.trim()) {
+
+    return;
+  }
+
+  const newEmployee = {
+    name: name.trim(),
+    role,
+    department,
+    status,
+    avatar:
+      avatarOptions[
+        employees.length % avatarOptions.length
+      ],
+  };
+
+  try {
+    const response = await fetch(
+
+      
+      "http://localhost:3000/employees",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(newEmployee),
+      }
+    );
+alert("Request sent. Status: " + response.status);
+    if (!response.ok) {
+      throw new Error("Failed to hire employee");
     }
 
-    const newEmployee: Employee = {
-      id: Date.now(),
-      name: name.trim(),
-      role,
-      department,
-      status,
-      avatar:
-        avatarOptions[
-          employees.length % avatarOptions.length
-        ],
-    };
+    const savedEmployee: Employee =
+      await response.json();
 
     setEmployees((current) => [
       ...current,
-      newEmployee,
+      savedEmployee,
     ]);
 
     setName("");
@@ -475,9 +510,24 @@ else if (
     setDepartment("Development");
     setStatus("Available");
     setShowHireForm(false);
-  };
+  } catch (error) {
+    console.error("Failed to hire employee:", error);
+  }
+};
 
-  const fireEmployee = (id: number) => {
+ const fireEmployee = async (id: number) => {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/employees/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete employee");
+    }
+
     setEmployees((current) =>
       current.filter(
         (employee) => employee.id !== id
@@ -485,33 +535,56 @@ else if (
     );
 
     setSelectedEmployee(null);
-  };
+  } catch (error) {
+    console.error("Failed to fire employee:", error);
+  }
+};
+const updateStatus = async (
+  id: number,
+  newStatus: Employee["status"]
+) => {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/employees/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      }
+    );
 
-  const updateStatus = (
-    id: number,
-    newStatus: Employee["status"]
-  ) => {
+    if (!response.ok) {
+      throw new Error("Failed to update employee status");
+    }
+
+    const updatedEmployee: Employee =
+      await response.json();
+
     setEmployees((current) =>
       current.map((employee) =>
         employee.id === id
-          ? {
-              ...employee,
-              status: newStatus,
-            }
+          ? updatedEmployee
           : employee
       )
     );
 
     setSelectedEmployee((current) =>
       current && current.id === id
-        ? {
-            ...current,
-            status: newStatus,
-          }
+        ? updatedEmployee
         : current
     );
-  };
-
+  } catch (error) {
+    console.error(
+      "Failed to update employee status:",
+      error
+    );
+  }
+};
+  
   const workingCount = employees.filter(
     (employee) =>
       employee.status === "Working"
@@ -1338,7 +1411,10 @@ else if (
 
             <button
               type="button"
-              onClick={hireEmployee}
+             onClick={() => {
+  alert("Hire button clicked");
+  hireEmployee();
+}}
               className="w-full rounded-lg px-4 py-2.5 text-xs font-bold"
               style={{
                 backgroundColor: "#39ff88",
