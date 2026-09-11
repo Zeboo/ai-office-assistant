@@ -1,5 +1,9 @@
 
-import { useMemo, useState } from "react";
+import {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import {
   CheckSquare,
   Plus,
@@ -38,64 +42,55 @@ type Task = {
   ai: boolean;
 };
 
-const initialTasks: Task[] = [
-  {
-    id: 1,
-    title: "Complete AI Virtual Office UI",
-    description: "Finish the main dashboard and workspace screens.",
-    priority: "High",
-    status: "In Progress",
-    date: "Today",
-    assigned: "Palwasha",
-    ai: false,
-  },
-  {
-    id: 2,
-    title: "Prepare project documentation",
-    description: "Generate technical documentation for the project.",
-    priority: "Medium",
-    status: "Pending",
-    date: "Tomorrow",
-    assigned: "Document Agent",
-    ai: true,
-  },
-  {
-    id: 3,
-    title: "Research AI productivity tools",
-    description: "Analyze useful AI tools for the virtual office.",
-    priority: "Medium",
-    status: "In Progress",
-    date: "Aug 21",
-    assigned: "Research Agent",
-    ai: true,
-  },
-  {
-    id: 4,
-    title: "Review client requirements",
-    description: "Check the latest requirements and update the project.",
-    priority: "Low",
-    status: "Completed",
-    date: "Aug 18",
-    assigned: "Palwasha",
-    ai: false,
-  },
-  {
-    id: 5,
-    title: "Schedule team meeting",
-    description: "Arrange the next project progress meeting.",
-    priority: "High",
-    status: "Pending",
-    date: "Aug 22",
-    assigned: "Manager Agent",
-    ai: true,
-  },
-];
+
 
 function Tasks({ themeMode }: TasksProps) {
   const colors =
     themeMode === "dark" ? darkColors : lightColors;
 
-  const [tasks, setTasks] = useState<Task[]>(initialTasks);
+ const [tasks, setTasks] = useState<Task[]>([]);
+
+useEffect(() => {
+  fetch("http://localhost:3000/tasks")
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error("Failed to load tasks");
+      }
+
+      return response.json();
+    })
+    .then((data) => {
+      const formattedTasks: Task[] = data.map(
+        (task: {
+          id: number;
+          title: string;
+          description: string;
+          status: TaskStatus;
+          priority: TaskPriority;
+          assignedTo: string;
+        }) => ({
+          id: task.id,
+          title: task.title,
+          description:
+            task.description || "No description available.",
+          status: task.status,
+          priority: task.priority,
+          date: "Today",
+          assigned: task.assignedTo,
+          ai: task.assignedTo.includes("Agent"),
+        })
+      );
+
+      setTasks(formattedTasks);
+    })
+    .catch((error) => {
+      console.error(
+        "Failed to load tasks:",
+        error
+      );
+    });
+}, []);
+
   const [filter, setFilter] = useState<"All" | TaskStatus>("All");
   const [search, setSearch] = useState("");
   const [showCreateModal, setShowCreateModal] = useState(false);
@@ -139,62 +134,148 @@ function Tasks({ themeMode }: TasksProps) {
     (task) => task.status === "Completed"
   ).length;
 
-  const toggleTask = (id: number) => {
-    setTasks((currentTasks) =>
-      currentTasks.map((task) => {
-        if (task.id !== id) {
-          return task;
-        }
+ const toggleTask = async (id: number) => {
+  const currentTask = tasks.find(
+    (task) => task.id === id
+  );
 
-        return {
-          ...task,
-          status:
-            task.status === "Completed"
-              ? "Pending"
-              : "Completed",
-        };
-      })
+  if (!currentTask) {
+    return;
+  }
+
+  const newStatus: TaskStatus =
+    currentTask.status === "Completed"
+      ? "Pending"
+      : "Completed";
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/tasks/${id}`,
+      {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          status: newStatus,
+        }),
+      }
     );
-  };
 
-  const deleteTask = (id: number) => {
+    if (!response.ok) {
+      throw new Error("Failed to update task");
+    }
+
+    const updatedTask = await response.json();
+
+    setTasks((currentTasks) =>
+      currentTasks.map((task) =>
+        task.id === id
+          ? {
+              ...task,
+              status: updatedTask.status,
+              title: updatedTask.title,
+              description: updatedTask.description,
+              priority: updatedTask.priority,
+              assigned: updatedTask.assignedTo,
+            }
+          : task
+      )
+    );
+  } catch (error) {
+    console.error(
+      "Failed to update task:",
+      error
+    );
+  }
+};
+
+  const deleteTask = async (id: number) => {
+  try {
+    const response = await fetch(
+      `http://localhost:3000/tasks/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to delete task");
+    }
+
     setTasks((currentTasks) =>
       currentTasks.filter((task) => task.id !== id)
     );
-  };
+  } catch (error) {
+    console.error(
+      "Failed to delete task:",
+      error
+    );
+  }
+};
+  const createTask = async () => {
+  const title = newTitle.trim();
 
-  const createTask = () => {
-    const title = newTitle.trim();
+  if (!title) {
+    return;
+  }
 
-    if (!title) {
-      return;
+  try {
+    const response = await fetch(
+      "http://localhost:3000/tasks",
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          title,
+          description:
+            newDescription.trim() ||
+            "New workspace task.",
+          status: "Pending",
+          priority: newPriority,
+          assignedTo: newAssigned,
+        }),
+      }
+    );
+
+    if (!response.ok) {
+      throw new Error("Failed to create task");
     }
 
-    const newTask: Task = {
-      id: Date.now(),
-      title,
+    const createdTask = await response.json();
+
+    const formattedTask: Task = {
+      id: createdTask.id,
+      title: createdTask.title,
       description:
-        newDescription.trim() ||
-        "New workspace task.",
-      priority: newPriority,
-      status: "Pending",
+        createdTask.description ||
+        "No description available.",
+      status: createdTask.status,
+      priority: createdTask.priority,
       date: "Today",
-      assigned: newAssigned,
-      ai: false,
+      assigned: createdTask.assignedTo,
+      ai: createdTask.assignedTo.includes("Agent"),
     };
 
     setTasks((currentTasks) => [
-      newTask,
+      formattedTask,
       ...currentTasks,
     ]);
 
-   setNewTitle("");
-setNewDescription("");
-setNewPriority("Medium");
-setNewAssigned("Palwasha Khan");
-setShowCreateModal(false);
-  };
-
+    setNewTitle("");
+    setNewDescription("");
+    setNewPriority("Medium");
+    setNewAssigned("Palwasha Khan");
+    setShowCreateModal(false);
+  } catch (error) {
+    console.error(
+      "Failed to create task:",
+      error
+    );
+  }
+};
   return (
     <div
       className="min-h-[calc(100vh-80px)] p-8"

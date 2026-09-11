@@ -1,5 +1,9 @@
 
-import { useState, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   Bot,
   Send,
@@ -40,73 +44,97 @@ function AICopilot({
 
   const [isThinking, setIsThinking] = useState(false);
 
-  const [messages, setMessages] = useState<Message[]>(() => {
-    const initialMessages: Message[] = [
+  const [messages, setMessages] = useState<Message[]>([
+  {
+    id: 1,
+    role: "ai",
+    text: "Hello Palwasha! I'm your AI Co-Pilot. How can I help you today?",
+    time: "Now",
+  },
+]);
+
+  const sendMessage = async (customMessage?: string) => {
+  const messageText = (customMessage ?? input).trim();
+
+  if (!messageText || isThinking) {
+    return;
+  }
+
+  const userMessage: Message = {
+    id: Date.now(),
+    role: "user",
+    text: messageText,
+    time: getCurrentTime(),
+  };
+
+  setMessages((oldMessages) => [
+    ...oldMessages,
+    userMessage,
+  ]);
+
+  setInput("");
+  setIsThinking(true);
+
+  try {
+    const response = await fetch(
+      "http://localhost:3000/copilot/command",
       {
-        id: 1,
-        role: "ai",
-        text: "Hello Palwasha! I'm your AI Co-Pilot. How can I help you today?",
-        time: "Now",
-      },
-    ];
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          command: messageText,
+        }),
+      }
+    );
 
-    if (initialMessage && initialMessage.trim() !== "") {
-      initialMessages.push({
-        id: 2,
-        role: "user",
-        text: initialMessage,
-        time: "Now",
-      });
-
-      initialMessages.push({
-        id: 3,
-        role: "ai",
-        text: getAIResponse(initialMessage),
-        time: "Now",
-      });
+    if (!response.ok) {
+      throw new Error("Failed to process AI command");
     }
 
-    return initialMessages;
-  });
+    const data = await response.json();
 
-  const sendMessage = (customMessage?: string) => {
-    const messageText = (customMessage ?? input).trim();
-
-    if (!messageText || isThinking) {
-      return;
-    }
-
-    const userMessage: Message = {
-      id: Date.now(),
-      role: "user",
-      text: messageText,
+    const aiMessage: Message = {
+      id: Date.now() + 1,
+      role: "ai",
+      text: data.message,
       time: getCurrentTime(),
     };
 
     setMessages((oldMessages) => [
       ...oldMessages,
-      userMessage,
+      aiMessage,
     ]);
+  } catch (error) {
+    console.error(
+      "Failed to connect to AI Co-Pilot:",
+      error
+    );
 
-    setInput("");
-    setIsThinking(true);
+    const errorMessage: Message = {
+      id: Date.now() + 1,
+      role: "ai",
+      text: "Unable to connect to AI Co-Pilot.",
+      time: getCurrentTime(),
+    };
 
-    window.setTimeout(() => {
-      const aiMessage: Message = {
-        id: Date.now() + 1,
-        role: "ai",
-        text: getAIResponse(messageText),
-        time: getCurrentTime(),
-      };
+    setMessages((oldMessages) => [
+      ...oldMessages,
+      errorMessage,
+    ]);
+  } finally {
+    setIsThinking(false);
+  }
+};
 
-      setMessages((oldMessages) => [
-        ...oldMessages,
-        aiMessage,
-      ]);
+useEffect(() => {
+  if (!initialMessage || !initialMessage.trim()) {
+    return;
+  }
 
-      setIsThinking(false);
-    }, 700);
-  };
+  sendMessage(initialMessage);
+}, [initialMessage]);
 
   const handleKeyDown = (
     event: KeyboardEvent<HTMLInputElement>
@@ -524,137 +552,5 @@ function getCurrentTime(): string {
 
 /* FRONTEND AI COMMAND HANDLER */
 
-function getAIResponse(question: string): string {
-  const lowerQuestion = question.toLowerCase().trim();
-
-  /* TASKS */
-
-  if (
-    lowerQuestion.includes("task") ||
-    lowerQuestion.includes("todo") ||
-    lowerQuestion.includes("to-do")
-  ) {
-    if (
-      lowerQuestion.includes("complete") ||
-      lowerQuestion.includes("completed")
-    ) {
-      return "You currently have 6 completed tasks. Keep going — there are 24 active tasks remaining in the workspace.";
-    }
-
-    if (
-      lowerQuestion.includes("pending") ||
-      lowerQuestion.includes("waiting")
-    ) {
-      return "You currently have 10 pending tasks. I recommend reviewing their priorities and deadlines first.";
-    }
-
-    return "You currently have 24 active tasks: 8 in progress, 10 pending, and 6 completed. I can help you organize or prioritize them.";
-  }
-
-  /* PROJECTS */
-
-  if (
-    lowerQuestion.includes("project") ||
-    lowerQuestion.includes("projects")
-  ) {
-    if (
-      lowerQuestion.includes("status") ||
-      lowerQuestion.includes("progress")
-    ) {
-      return "You currently have 12 projects. Three projects are due soon. Your AI Office MVP is currently one of the main priorities.";
-    }
-
-    return "You currently have 12 projects in your workspace. I can help you review project status, priorities, and upcoming deadlines.";
-  }
-
-  /* CALENDAR / SCHEDULE */
-
-  if (
-    lowerQuestion.includes("calendar") ||
-    lowerQuestion.includes("schedule") ||
-    lowerQuestion.includes("meeting") ||
-    lowerQuestion.includes("appointment")
-  ) {
-    return "Today's schedule has 3 activities: Team Standup at 10:00 AM, Client Meeting at 12:30 PM, and Project Review at 3:00 PM.";
-  }
-
-  /* DAY PLANNING */
-
-  if (
-    lowerQuestion.includes("plan my day") ||
-    lowerQuestion.includes("my day") ||
-    lowerQuestion.includes("today")
-  ) {
-    return "Here's a suggested plan: start with your highest-priority tasks, attend the 10:00 AM Team Standup, prepare for the 12:30 PM Client Meeting, and finish the day with the 3:00 PM Project Review.";
-  }
-
-  /* REPORTS / PERFORMANCE */
-
-  if (
-    lowerQuestion.includes("report") ||
-    lowerQuestion.includes("performance") ||
-    lowerQuestion.includes("productivity") ||
-    lowerQuestion.includes("score")
-  ) {
-    return "Your current productivity score is 1,820 and your weekly productivity is 82%. Your workspace performance is trending positively.";
-  }
-
-  /* DOCUMENTS */
-
-  if (
-    lowerQuestion.includes("document") ||
-    lowerQuestion.includes("file") ||
-    lowerQuestion.includes("report file")
-  ) {
-    return "You currently have documents available in the workspace. I can help you organize documents or prepare a project report. Actual file searching will be connected later through the backend.";
-  }
-
-  /* AI AGENTS */
-
-  if (
-    lowerQuestion.includes("agent") ||
-    lowerQuestion.includes("agents") ||
-    lowerQuestion.includes("ai team")
-  ) {
-    return "Your AI workspace currently includes 8 agents. The main agents include Manager, Research, Document, Workflow, and Meeting agents.";
-  }
-
-  /* WORKFLOWS */
-
-  if (
-    lowerQuestion.includes("workflow") ||
-    lowerQuestion.includes("automation") ||
-    lowerQuestion.includes("automate")
-  ) {
-    return "Your workspace can use automated workflows for repetitive office tasks. Workflow execution and real automation will be connected to the backend later.";
-  }
-
-  /* GREETING */
-
-  if (
-    lowerQuestion === "hi" ||
-    lowerQuestion === "hello" ||
-    lowerQuestion.includes("hey")
-  ) {
-    return "Hello! I'm ready to help with your tasks, projects, schedule, documents, reports, and AI workspace.";
-  }
-
-  /* HELP */
-
-  if (
-    lowerQuestion.includes("help") ||
-    lowerQuestion.includes("what can you do")
-  ) {
-    return "I can currently help with workspace tasks, projects, schedules, daily planning, reports, documents, AI agents, and workflows. Real AI reasoning and external system actions will be connected through the backend later.";
-  }
-
-  /* DEFAULT RESPONSE */
-
-  return (
-    "I understand your request: \"" +
-    question +
-    "\". I can currently process common workspace commands such as tasks, projects, schedules, reports, documents, agents, and workflows. For completely open-ended AI conversations, we'll connect the real AI backend in the next phase."
-  );
-}
 
 export default AICopilot;

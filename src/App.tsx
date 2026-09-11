@@ -96,25 +96,40 @@ useEffect(() => {
 });
 
 useEffect(() => {
-  fetch("http://localhost:3000/dashboard/stats")
-    .then((response) => {
+  const loadDashboardStats = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:3000/dashboard/stats"
+      );
+
       if (!response.ok) {
-        throw new Error("Failed to load dashboard stats");
+        throw new Error(
+          "Failed to load dashboard stats"
+        );
       }
 
-      return response.json();
-    })
-    .then((data) => {
+      const data = await response.json();
+
       setDashboardStats(data);
-    })
-    .catch((error) => {
+    } catch (error) {
       console.error(
         "Failed to load dashboard stats:",
         error
       );
-    });
-}, []);
+    }
+  };
 
+  loadDashboardStats();
+
+  const interval = window.setInterval(
+    loadDashboardStats,
+    10000
+  );
+
+  return () => {
+    window.clearInterval(interval);
+  };
+}, []);
 const [schedule, setSchedule] = useState<
   {
     time: string;
@@ -273,19 +288,14 @@ useEffect(() => {
     });
 }, []);
 
-  const openCopilot = () => {
-    const message = aiCommand.trim();
+const openCopilot = () => {
+  const message = aiCommand.trim();
 
-    if (!message) {
-      setCopilotMessage("");
-    } else {
-      setCopilotMessage(message);
-    }
+  setCopilotMessage(message);
 
-    setAiCommand("");
-    setActiveMenu("AI Co-Pilot");
-  };
-
+  setAiCommand("");
+  setActiveMenu("AI Co-Pilot");
+};
   return (
     <div
       className="min-h-screen"
