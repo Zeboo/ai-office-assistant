@@ -301,6 +301,57 @@ else if (
 };
 
 
+const executePcControl = async (options: {
+  endpoint: string;
+  command: string;
+  understood: string;
+  confirmationMessage?: string;
+}) => {
+  const { endpoint, command, understood, confirmationMessage } = options;
+
+  if (confirmationMessage && !window.confirm(confirmationMessage)) {
+    return;
+  }
+
+  setAssistantLog({
+    command,
+    understood,
+    assignedTo: "Computer Agent",
+    response: "Computer Agent is executing the command...",
+    systemControl: "Active",
+  });
+
+  try {
+    const response = await fetch(
+      `http://localhost:3000/pc-control/${endpoint}`,
+      {
+        method: "POST",
+      }
+    );
+
+    const data = await response.json();
+
+    setAssistantLog({
+      command,
+      understood,
+      assignedTo: "Computer Agent",
+      response: data.message ?? "Command completed.",
+      systemControl: "Active",
+    });
+  } catch (error) {
+    console.error("PC Control error:", error);
+
+    setAssistantLog({
+      command,
+      understood,
+      assignedTo: "Computer Agent",
+      response: "Could not connect to the PC Control backend.",
+      systemControl: "Active",
+    });
+  }
+};
+
+
 const startVoiceCommand = () => {
 
 if (assistantLog.systemControl === "Inactive") {
@@ -651,15 +702,13 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "chrome",
       command: "Open Chrome",
       understood: "Open browser command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to open Chrome.",
-      systemControl: "Active",
-    });
-  }}
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -671,15 +720,13 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "notepad",
       command: "Open Notepad",
       understood: "Open Notepad command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to open Notepad.",
-      systemControl: "Active",
-    });
-  }}
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -691,15 +738,13 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "calculator",
       command: "Open Calculator",
       understood: "Open Calculator command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to open Calculator.",
-      systemControl: "Active",
-    });
-  }}
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -711,15 +756,13 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "file-explorer",
       command: "Open File Explorer",
       understood: "Open File Explorer command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to open File Explorer.",
-      systemControl: "Active",
-    });
-  }}
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -732,15 +775,14 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "lock",
       command: "Lock PC",
       understood: "Lock computer command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to lock the PC.",
-      systemControl: "Active",
-    });
-  }}
+      confirmationMessage: "Are you sure you want to lock the PC?",
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -752,15 +794,14 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "restart",
       command: "Restart PC",
       understood: "Restart computer command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to restart the PC.",
-      systemControl: "Active",
-    });
-  }}
+      confirmationMessage: "Are you sure you want to restart the PC?",
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -772,15 +813,14 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "shutdown",
       command: "Shutdown PC",
       understood: "Shutdown computer command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the command to shut down the PC.",
-      systemControl: "Active",
-    });
-  }}
+      confirmationMessage: "Are you sure you want to shut down the PC?",
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
@@ -792,15 +832,13 @@ const updateStatus = async (
 
 <button
   type="button"
-  onClick={() => {
-    setAssistantLog({
+  onClick={() =>
+    executePcControl({
+      endpoint: "volume",
       command: "Volume Control",
       understood: "Computer volume control command",
-      assignedTo: "Computer Agent",
-      response: "Computer Agent received the volume control command.",
-      systemControl: "Active",
-    });
-  }}
+    })
+  }
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
