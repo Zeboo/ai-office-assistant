@@ -1,5 +1,6 @@
 
 import {
+  useEffect,
   useRef,
   useState,
   type ReactNode,
@@ -32,12 +33,9 @@ type SettingsProps = {
 };
 
 type SettingsState = {
-
-  
   fullName: string;
-email: string;
-profileImage: string;
-
+  email: string;
+  profileImage: string;
   emailNotifications: boolean;
   taskNotifications: boolean;
   mobileNotifications: boolean;
@@ -48,10 +46,9 @@ profileImage: string;
 };
 
 const defaultSettings: SettingsState = {
-
   fullName: "Palwasha",
-email: "palwasha@example.com",
-profileImage: "",
+  email: "palwasha@example.com",
+  profileImage: "",
   emailNotifications: true,
   taskNotifications: true,
   mobileNotifications: false,
@@ -65,33 +62,97 @@ function Settings({
   themeMode,
   onThemeChange,
 }: SettingsProps) {
-
-   
-  
   const colors =
     themeMode === "dark" ? darkColors : lightColors;
-    const fileInputRef = useRef<HTMLInputElement>(null);
 
- const [settings, setSettings] =
-  useState<SettingsState>(() => {
-      const savedSettings =
-        localStorage.getItem("ai-office-settings");
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-      if (savedSettings) {
-        try {
-          return {
-            ...defaultSettings,
-            ...JSON.parse(savedSettings),
-          };
-        } catch {
-          return defaultSettings;
-        }
-      }
-
-      return defaultSettings;
-    });
+  const [settings, setSettings] =
+    useState<SettingsState>(defaultSettings);
 
   const [saved, setSaved] = useState(false);
+  const [profileSaved, setProfileSaved] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  // Load settings from backend
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const response = await fetch(
+          "http://localhost:3000/settings",
+        );
+
+        if (!response.ok) {
+          throw new Error("Failed to load settings");
+        }
+
+        const data = await response.json();
+
+        const backendSettings: SettingsState = {
+          fullName:
+            data.fullName ?? defaultSettings.fullName,
+          email:
+            data.email ?? defaultSettings.email,
+          profileImage:
+            data.profileImage ?? defaultSettings.profileImage,
+          emailNotifications:
+            data.emailNotifications ??
+            defaultSettings.emailNotifications,
+          taskNotifications:
+            data.taskNotifications ??
+            defaultSettings.taskNotifications,
+          mobileNotifications:
+            data.mobileNotifications ??
+            defaultSettings.mobileNotifications,
+          twoFactorAuthentication:
+            data.twoFactorAuthentication ??
+            defaultSettings.twoFactorAuthentication,
+          automaticTasks:
+            data.automaticTasks ??
+            defaultSettings.automaticTasks,
+          smartSuggestions:
+            data.smartSuggestions ??
+            defaultSettings.smartSuggestions,
+          language:
+            data.language ?? defaultSettings.language,
+        };
+
+        setSettings(backendSettings);
+
+        // Keep local copy as fallback
+        localStorage.setItem(
+          "ai-office-settings",
+          JSON.stringify(backendSettings),
+        );
+      } catch (error) {
+        console.error(
+          "Settings backend error:",
+          error,
+        );
+
+        // Fallback to localStorage
+        const savedSettings =
+          localStorage.getItem("ai-office-settings");
+
+        if (savedSettings) {
+          try {
+            setSettings({
+              ...defaultSettings,
+              ...JSON.parse(savedSettings),
+            });
+          } catch {
+            setSettings(defaultSettings);
+          }
+        } else {
+          setSettings(defaultSettings);
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadSettings();
+  }, []);
 
   const updateSetting = (
     key: keyof SettingsState,
@@ -105,22 +166,120 @@ function Settings({
     setSaved(false);
   };
 
-  const saveSettings = () => {
-  localStorage.setItem(
-    "ai-office-settings",
-    JSON.stringify(settings),
-  );
+  // Save settings to backend
+  const saveSettings = async () => {
+    try {
+      const response = await fetch(
+        "http://localhost:3000/settings",
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(settings),
+        },
+      );
 
-  setSettings((previous) => ({
-    ...previous,
-  }));
+      if (!response.ok) {
+        throw new Error("Failed to save settings");
+      }
 
-  setSaved(true);
+      const data = await response.json();
 
-  setTimeout(() => {
-    setSaved(false);
-  }, 2000);
-};
+      if (data.settings) {
+        const updatedSettings: SettingsState = {
+          fullName:
+            data.settings.fullName ??
+            defaultSettings.fullName,
+          email:
+            data.settings.email ??
+            defaultSettings.email,
+          profileImage:
+            data.settings.profileImage ??
+            defaultSettings.profileImage,
+          emailNotifications:
+            data.settings.emailNotifications ??
+            defaultSettings.emailNotifications,
+          taskNotifications:
+            data.settings.taskNotifications ??
+            defaultSettings.taskNotifications,
+          mobileNotifications:
+            data.settings.mobileNotifications ??
+            defaultSettings.mobileNotifications,
+          twoFactorAuthentication:
+            data.settings.twoFactorAuthentication ??
+            defaultSettings.twoFactorAuthentication,
+          automaticTasks:
+            data.settings.automaticTasks ??
+            defaultSettings.automaticTasks,
+          smartSuggestions:
+            data.settings.smartSuggestions ??
+            defaultSettings.smartSuggestions,
+          language:
+            data.settings.language ??
+            defaultSettings.language,
+        };
+
+        setSettings(updatedSettings);
+
+        localStorage.setItem(
+          "ai-office-settings",
+          JSON.stringify(updatedSettings),
+        );
+      }
+
+      setSaved(true);
+      setProfileSaved(true);
+
+setTimeout(() => {
+  setProfileSaved(false);
+}, 2000);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 2000);
+    } catch (error) {
+      console.error(
+        "Save settings error:",
+        error,
+      );
+
+      // Local fallback
+      localStorage.setItem(
+        "ai-office-settings",
+        JSON.stringify(settings),
+      );
+
+      setSaved(true);
+
+      setTimeout(() => {
+        setSaved(false);
+      }, 2000);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div
+        className="flex min-h-[calc(100vh-80px)] items-center justify-center"
+        style={{
+          backgroundColor: colors.background,
+          color: colors.text,
+        }}
+      >
+        <div
+          className="rounded-xl border px-5 py-3 text-sm"
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+            color: colors.textMuted,
+          }}
+        >
+          Loading settings...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -159,10 +318,8 @@ function Settings({
       </div>
 
       <div className="grid grid-cols-3 gap-6">
-
         {/* LEFT SETTINGS */}
         <div className="col-span-2 space-y-5">
-
           {/* PROFILE */}
           <section
             className="rounded-2xl border p-6"
@@ -196,7 +353,6 @@ function Settings({
             </div>
 
             <div className="grid grid-cols-2 gap-4">
-
               {/* NAME */}
               <div>
                 <label
@@ -208,20 +364,21 @@ function Settings({
                   Full Name
                 </label>
 
-               <input
-  value={settings.fullName}
-  onChange={(event) => {
-    updateSetting("fullName", event.target.value);
-  }}
-  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-  style={{
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    color: colors.text,
-  }}
-/>
-                 
-                
+                <input
+                  value={settings.fullName}
+                  onChange={(event) => {
+                    updateSetting(
+                      "fullName",
+                      event.target.value,
+                    );
+                  }}
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                />
               </div>
 
               {/* EMAIL */}
@@ -235,35 +392,47 @@ function Settings({
                   Email
                 </label>
 
-<input
-  value={settings.email}
-  onChange={(event) => {
-    updateSetting("email", event.target.value);
-  }}
-  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-  style={{
-    backgroundColor: colors.background,
-    borderColor: colors.border,
-    color: colors.text,
-  }}
-/>
-                 
-                
+                <input
+                  value={settings.email}
+                  onChange={(event) => {
+                    updateSetting(
+                      "email",
+                      event.target.value,
+                    );
+                  }}
+                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
+                  style={{
+                    backgroundColor: colors.background,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  }}
+                />
               </div>
-
             </div>
-                        <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={saveSettings}
-                className="rounded-xl px-5 py-2.5 text-xs font-bold transition"
-                style={{
-                  backgroundColor: colors.primary,
-                  color: colors.black,
-                }}
-              >
-                Save Profile
-              </button>
+
+            <div className="mt-5 flex justify-end">
+             <button
+  type="button"
+  onClick={saveSettings}
+  className="rounded-xl px-5 py-2.5 text-xs font-bold transition"
+  style={{
+    backgroundColor: profileSaved
+      ? colors.surfaceLight
+      : colors.primary,
+    color: profileSaved
+      ? colors.primary
+      : colors.black,
+  }}
+>
+  {profileSaved ? (
+    <>
+      <span className="mr-2">✓</span>
+      Profile Saved
+    </>
+  ) : (
+    "Save Profile"
+  )}
+</button>
             </div>
           </section>
 
@@ -300,13 +469,14 @@ function Settings({
             </div>
 
             <div className="space-y-4">
-
               <SettingRow
                 colors={colors}
                 icon={<Mail size={17} />}
                 title="Email Notifications"
                 description="Receive important updates by email"
-                enabled={settings.emailNotifications}
+                enabled={
+                  settings.emailNotifications
+                }
                 onToggle={() =>
                   updateSetting(
                     "emailNotifications",
@@ -320,7 +490,9 @@ function Settings({
                 icon={<Bell size={17} />}
                 title="Task Notifications"
                 description="Get notified when tasks change"
-                enabled={settings.taskNotifications}
+                enabled={
+                  settings.taskNotifications
+                }
                 onToggle={() =>
                   updateSetting(
                     "taskNotifications",
@@ -334,7 +506,9 @@ function Settings({
                 icon={<Smartphone size={17} />}
                 title="Mobile Notifications"
                 description="Receive notifications on your devices"
-                enabled={settings.mobileNotifications}
+                enabled={
+                  settings.mobileNotifications
+                }
                 onToggle={() =>
                   updateSetting(
                     "mobileNotifications",
@@ -342,7 +516,6 @@ function Settings({
                   )
                 }
               />
-
             </div>
           </section>
 
@@ -386,7 +559,6 @@ function Settings({
               }}
             >
               <div className="flex items-center gap-3">
-
                 <div
                   className="flex h-9 w-9 items-center justify-center rounded-lg"
                   style={{
@@ -420,7 +592,6 @@ function Settings({
                     Switch between dark and light workspace themes
                   </p>
                 </div>
-
               </div>
 
               <button
@@ -455,7 +626,6 @@ function Settings({
                   }}
                 />
               </button>
-
             </div>
           </section>
 
@@ -547,7 +717,6 @@ function Settings({
 
         {/* RIGHT SIDEBAR */}
         <div className="space-y-5">
-
           {/* ACCOUNT */}
           <section
             className="rounded-2xl border p-6"
@@ -557,59 +726,66 @@ function Settings({
             }}
           >
             <div className="flex items-center gap-4">
-
               <div
-  className="relative h-14 w-14 cursor-pointer overflow-hidden rounded-full"
-  onClick={() => fileInputRef.current?.click()}
-  title="Change profile picture"
->
-  {settings.profileImage ? (
-    <img
-      src={settings.profileImage}
-      alt="Profile"
-      className="h-full w-full object-cover"
-    />
-  ) : (
-    <div
-      className="flex h-full w-full items-center justify-center text-lg font-bold"
-      style={{
-        backgroundColor: colors.primary,
-        color: colors.black,
-      }}
-    >
-      {settings.fullName.charAt(0).toUpperCase() || "P"}
-    </div>
-  )}
-</div>
+                className="relative h-14 w-14 cursor-pointer overflow-hidden rounded-full"
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                title="Change profile picture"
+              >
+                {settings.profileImage ? (
+                  <img
+                    src={settings.profileImage}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div
+                    className="flex h-full w-full items-center justify-center text-lg font-bold"
+                    style={{
+                      backgroundColor: colors.primary,
+                      color: colors.black,
+                    }}
+                  >
+                    {settings.fullName
+                      .charAt(0)
+                      .toUpperCase() || "P"}
+                  </div>
+                )}
+              </div>
 
-<input
-  ref={fileInputRef}
-  type="file"
-  accept="image/*"
-  className="hidden"
-  onChange={(event) => {
-    const file = event.target.files?.[0];
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(event) => {
+                  const file =
+                    event.target.files?.[0];
 
-    if (!file) return;
+                  if (!file) return;
 
-    const reader = new FileReader();
+                  const reader = new FileReader();
 
-    reader.onload = () => {
-      const result = reader.result;
+                  reader.onload = () => {
+                    const result = reader.result;
 
-      if (typeof result === "string") {
-        updateSetting("profileImage", result);
-      }
-    };
+                    if (typeof result === "string") {
+                      updateSetting(
+                        "profileImage",
+                        result,
+                      );
+                    }
+                  };
 
-    reader.readAsDataURL(file);
-  }}
-/>
+                  reader.readAsDataURL(file);
+                }}
+              />
 
               <div>
                 <h2 className="font-semibold">
-  {settings.fullName}
-</h2>
+                  {settings.fullName}
+                </h2>
 
                 <p
                   className="text-xs"
@@ -620,7 +796,6 @@ function Settings({
                   Premium User
                 </p>
               </div>
-
             </div>
 
             <div
@@ -630,7 +805,6 @@ function Settings({
               }}
             >
               <div className="flex items-center justify-between">
-
                 <span
                   className="text-xs"
                   style={{
@@ -648,7 +822,6 @@ function Settings({
                 >
                   Active
                 </span>
-
               </div>
             </div>
           </section>
@@ -662,7 +835,6 @@ function Settings({
             }}
           >
             <div className="mb-4 flex items-center gap-3">
-
               <Globe
                 size={18}
                 style={{
@@ -684,7 +856,6 @@ function Settings({
                   Choose your preferred language
                 </p>
               </div>
-
             </div>
 
             <select
@@ -733,7 +904,6 @@ function Settings({
             </div>
 
             <div className="space-y-4">
-
               <SettingRow
                 colors={colors}
                 title="Automatic Tasks"
@@ -759,7 +929,6 @@ function Settings({
                   )
                 }
               />
-
             </div>
           </section>
 
@@ -789,7 +958,6 @@ function Settings({
               </>
             )}
           </button>
-
         </div>
       </div>
     </div>
@@ -798,7 +966,7 @@ function Settings({
 
 type SettingRowProps = {
   colors: typeof darkColors;
-   icon?: ReactNode;
+  icon?: ReactNode;
   title: string;
   description: string;
   enabled: boolean;
@@ -815,17 +983,14 @@ function SettingRow({
 }: SettingRowProps) {
   return (
     <div className="flex items-center justify-between">
-
       <div className="flex items-center gap-3">
-
         {icon && (
           <div
             className="flex h-9 w-9 items-center justify-center rounded-lg"
             style={{
-              backgroundColor:
-                enabled
-                  ? "rgba(57,255,136,0.08)"
-                  : colors.surfaceLight,
+              backgroundColor: enabled
+                ? "rgba(57,255,136,0.08)"
+                : colors.surfaceLight,
               color: colors.primary,
             }}
           >
@@ -847,7 +1012,6 @@ function SettingRow({
             {description}
           </p>
         </div>
-
       </div>
 
       <button
@@ -859,21 +1023,18 @@ function SettingRow({
             ? colors.primary
             : colors.surfaceLight,
         }}
-          aria-label={`Toggle ${title}`}
+        aria-label={`Toggle ${title}`}
       >
         <span
           className="absolute top-1 h-4 w-4 rounded-full transition"
           style={{
-            left: enabled
-              ? "24px"
-              : "4px",
+            left: enabled ? "24px" : "4px",
             backgroundColor: enabled
               ? colors.black
               : colors.textMuted,
           }}
         />
       </button>
-
     </div>
   );
 }
