@@ -1,5 +1,4 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Users,
   UserPlus,
@@ -26,6 +25,8 @@ type Employee = {
   status: "Active" | "On Leave";
 };
 
+const API_URL = "http://localhost:3000/employees";
+
 function Team({
   themeMode,
 }: {
@@ -41,6 +42,9 @@ function Team({
   const [selectedEmployee, setSelectedEmployee] =
     useState<Employee | null>(null);
 
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
   const [employeeForm, setEmployeeForm] = useState({
     name: "",
     role: "",
@@ -50,53 +54,56 @@ function Team({
     status: "Active" as "Active" | "On Leave",
   });
 
-  const [employees, setEmployees] = useState<Employee[]>([
-    {
-      id: 1,
-      name: "Sarah Ahmed",
-      role: "Project Manager",
-      department: "Management",
-      email: "sarah@company.com",
-      phone: "+92 300 1111111",
-      status: "Active",
-    },
-    {
-      id: 2,
-      name: "Ali Khan",
-      role: "Frontend Developer",
-      department: "Engineering",
-      email: "ali@company.com",
-      phone: "+92 300 2222222",
-      status: "Active",
-    },
-    {
-      id: 3,
-      name: "Ayesha Malik",
-      role: "UI/UX Designer",
-      department: "Design",
-      email: "ayesha@company.com",
-      phone: "+92 300 3333333",
-      status: "Active",
-    },
-    {
-      id: 4,
-      name: "Usman Tariq",
-      role: "HR Specialist",
-      department: "HR",
-      email: "usman@company.com",
-      phone: "+92 300 4444444",
-      status: "On Leave",
-    },
-    {
-      id: 5,
-      name: "Hamza Noor",
-      role: "Finance Officer",
-      department: "Finance",
-      email: "hamza@company.com",
-      phone: "+92 300 5555555",
-      status: "Active",
-    },
-  ]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+
+  const departments = [
+    "All",
+    "Management",
+    "Engineering",
+    "Design",
+    "HR",
+    "Finance",
+  ];
+
+  const loadEmployees = async () => {
+    try {
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error("Failed to load employees.");
+      }
+
+      const data = await response.json();
+
+      const mappedEmployees: Employee[] = data.map(
+        (employee: any) => ({
+          id: employee.id,
+          name: employee.name ?? "",
+          role: employee.role ?? "",
+          department: employee.department ?? "",
+          email: employee.email ?? "",
+          phone: employee.phone ?? "",
+          status:
+            employee.status === "On Leave"
+              ? "On Leave"
+              : "Active",
+        })
+      );
+
+      setEmployees(mappedEmployees);
+    } catch (error) {
+      console.error(error);
+      alert(
+        "Could not load employees from backend. Make sure the backend is running."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadEmployees();
+  }, []);
 
   const filteredEmployees = useMemo(() => {
     return employees.filter((employee) => {
@@ -126,15 +133,6 @@ function Team({
   const onLeaveEmployees = employees.filter(
     (employee) => employee.status === "On Leave"
   ).length;
-
-  const departments = [
-    "All",
-    "Management",
-    "Engineering",
-    "Design",
-    "HR",
-    "Finance",
-  ];
 
   const openAddModal = () => {
     setSelectedEmployee(null);
@@ -166,67 +164,138 @@ function Team({
     setShowModal(true);
   };
 
-  const saveEmployee = () => {
+  const saveEmployee = async () => {
     if (
       !employeeForm.name.trim() ||
       !employeeForm.role.trim() ||
+      !employeeForm.department.trim() ||
       !employeeForm.email.trim()
     ) {
       alert(
-        "Please enter employee name, role and email."
+        "Please enter employee name, role, department and email."
       );
       return;
     }
 
-    if (selectedEmployee) {
-      setEmployees((current) =>
-        current.map((employee) =>
-          employee.id === selectedEmployee.id
-            ? {
-                ...employee,
-                ...employeeForm,
-                name: employeeForm.name.trim(),
-                role: employeeForm.role.trim(),
-                email: employeeForm.email.trim(),
-                phone: employeeForm.phone.trim(),
-              }
-            : employee
-        )
-      );
-    } else {
-      const newEmployee: Employee = {
-        id: Date.now(),
-        name: employeeForm.name.trim(),
-        role: employeeForm.role.trim(),
-        department: employeeForm.department,
-        email: employeeForm.email.trim(),
-        phone: employeeForm.phone.trim(),
-        status: employeeForm.status,
+    setSaving(true);
+
+    try {
+      const url = selectedEmployee
+        ? `${API_URL}/${selectedEmployee.id}`
+        : API_URL;
+
+      const method = selectedEmployee ? "PATCH" : "POST";
+
+      const response = await fetch(url, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: employeeForm.name.trim(),
+          role: employeeForm.role.trim(),
+          department: employeeForm.department,
+          email: employeeForm.email.trim(),
+          phone: employeeForm.phone.trim(),
+          status: employeeForm.status,
+          avatar: "",
+        }),
+      });
+
+      if (!response.ok) {
+        const errorBody = await response
+          .json()
+          .catch(() => null);
+
+        throw new Error(
+          errorBody?.message ||
+            "Failed to save employee."
+        );
+      }
+
+      const saved = await response.json();
+
+      const mappedEmployee: Employee = {
+        id: saved.id,
+        name: saved.name ?? "",
+        role: saved.role ?? "",
+        department: saved.department ?? "",
+        email: saved.email ?? "",
+        phone: saved.phone ?? "",
+        status:
+          saved.status === "On Leave"
+            ? "On Leave"
+            : "Active",
       };
 
-      setEmployees((current) => [
-        ...current,
-        newEmployee,
-      ]);
-    }
+      if (selectedEmployee) {
+        setEmployees((current) =>
+          current.map((employee) =>
+            employee.id === mappedEmployee.id
+              ? mappedEmployee
+              : employee
+          )
+        );
+      } else {
+        setEmployees((current) => [
+          ...current,
+          mappedEmployee,
+        ]);
+      }
 
-    setShowModal(false);
-    setSelectedEmployee(null);
+      setShowModal(false);
+      setSelectedEmployee(null);
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Could not save employee."
+      );
+    } finally {
+      setSaving(false);
+    }
   };
 
-  const deleteEmployee = (id: number) => {
+  const deleteEmployee = async (id: number) => {
     const confirmed = window.confirm(
       "Are you sure you want to delete this employee?"
     );
 
     if (!confirmed) return;
 
-    setEmployees((current) =>
-      current.filter((employee) => employee.id !== id)
-    );
+    try {
+      const response = await fetch(
+        `${API_URL}/${id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    if (selectedEmployee?.id === id) {
-      setSelectedEmployee(null);
+      if (!response.ok) {
+        throw new Error(
+          "Failed to delete employee."
+        );
+      }
+
+      setEmployees((current) =>
+        current.filter(
+          (employee) => employee.id !== id
+        )
+      );
+
+      if (selectedEmployee?.id === id) {
+        setSelectedEmployee(null);
+      }
+    } catch (error) {
+      console.error(error);
+
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Could not delete employee."
+      );
     }
   };
 
@@ -268,8 +337,6 @@ function Team({
         </div>
 
         <div className="flex items-center gap-3">
-          
-
           {/* ADD EMPLOYEE */}
           <button
             type="button"
@@ -443,7 +510,36 @@ function Team({
       </div>
 
       {/* EMPLOYEE GRID */}
-      {filteredEmployees.length === 0 ? (
+      {loading ? (
+        <div
+          className="rounded-2xl border p-10 text-center"
+          style={{
+            backgroundColor: theme.surface,
+            borderColor: theme.border,
+          }}
+        >
+          <Users
+            size={35}
+            className="mx-auto mb-3"
+            style={{
+              color: theme.textMuted,
+            }}
+          />
+
+          <p className="text-sm font-semibold">
+            Loading employees...
+          </p>
+
+          <p
+            className="mt-1 text-xs"
+            style={{
+              color: theme.textMuted,
+            }}
+          >
+            Getting team members from the backend.
+          </p>
+        </div>
+      ) : filteredEmployees.length === 0 ? (
         <div
           className="rounded-2xl border p-10 text-center"
           style={{
@@ -1066,7 +1162,8 @@ function Team({
               <button
                 type="button"
                 onClick={saveEmployee}
-                className="rounded-xl px-5 py-2.5 text-xs font-bold"
+                disabled={saving}
+                className="rounded-xl px-5 py-2.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   backgroundColor: theme.primary,
                   color: dark
@@ -1074,9 +1171,11 @@ function Team({
                     : "#FFFFFF",
                 }}
               >
-                {selectedEmployee
-                  ? "Save Changes"
-                  : "Add Employee"}
+                {saving
+                  ? "Saving..."
+                  : selectedEmployee
+                    ? "Save Changes"
+                    : "Add Employee"}
               </button>
             </div>
           </div>
