@@ -306,8 +306,15 @@ const executePcControl = async (options: {
   command: string;
   understood: string;
   confirmationMessage?: string;
+  body?: Record<string, unknown>;
 }) => {
-  const { endpoint, command, understood, confirmationMessage } = options;
+  const {
+    endpoint,
+    command,
+    understood,
+    confirmationMessage,
+    body,
+  } = options;
 
   if (confirmationMessage && !window.confirm(confirmationMessage)) {
     return;
@@ -326,6 +333,12 @@ const executePcControl = async (options: {
       `http://localhost:3000/pc-control/${endpoint}`,
       {
         method: "POST",
+        headers: body
+          ? {
+              "Content-Type": "application/json",
+            }
+          : undefined,
+        body: body ? JSON.stringify(body) : undefined,
       }
     );
 
@@ -829,16 +842,38 @@ const updateStatus = async (
 >
   ⏻ Shutdown PC
 </button>
-
 <button
   type="button"
-  onClick={() =>
+  onClick={() => {
+    const level = window.prompt(
+      "Enter volume level (0-100):",
+      "50",
+    );
+
+    if (level === null) {
+      return;
+    }
+
+    const volumeLevel = Number(level);
+
+    if (
+      !Number.isFinite(volumeLevel) ||
+      volumeLevel < 0 ||
+      volumeLevel > 100
+    ) {
+      window.alert("Please enter a volume level between 0 and 100.");
+      return;
+    }
+
     executePcControl({
       endpoint: "volume",
-      command: "Volume Control",
+      command: `Set Volume to ${volumeLevel}%`,
       understood: "Computer volume control command",
-    })
-  }
+      body: {
+        level: volumeLevel,
+      },
+    });
+  }}
   className="rounded-xl border px-4 py-3 text-xs font-semibold transition hover:scale-[1.02]"
   style={{
     backgroundColor: dark ? "#151b18" : "#f6f8f7",
