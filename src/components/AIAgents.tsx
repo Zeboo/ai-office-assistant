@@ -1,5 +1,4 @@
-
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Bot,
   Plus,
@@ -12,7 +11,6 @@ import {
   Clock3,
   Zap,
   X,
-  
   Trash2,
   Power,
 } from "lucide-react";
@@ -32,112 +30,100 @@ type Agent = {
   activity: string;
 };
 
-function AIAgents({
-  themeMode,
-}: {
-  themeMode: "dark" | "light";
-}) {
-  const colors = themeMode === "dark" ? darkColors : lightColors;
+function AIAgents({ themeMode }: { themeMode: "dark" | "light" }) {
+  const colors =
+    themeMode === "dark" ? darkColors : lightColors;
 
-  const [agents, setAgents] = useState<Agent[]>([
-    {
-      id: 1,
-      name: "Manager Agent",
-      role: "Workspace Manager",
-      description:
-        "Manages projects, tasks, team activity and overall workspace workflows.",
-      status: "Active",
-      tasks: 12,
-      accuracy: "96%",
-      activity: "Managing 8 active workflows",
-    },
-    {
-      id: 2,
-      name: "Research Agent",
-      role: "Research Specialist",
-      description:
-        "Researches information, analyzes data and prepares useful summaries.",
-      status: "Active",
-      tasks: 6,
-      accuracy: "94%",
-      activity: "Analyzing market research",
-    },
-    {
-      id: 3,
-      name: "Document Agent",
-      role: "Document Specialist",
-      description:
-        "Processes documents, creates summaries and extracts important information.",
-      status: "Active",
-      tasks: 9,
-      accuracy: "98%",
-      activity: "Processing 4 documents",
-    },
-    {
-      id: 4,
-      name: "Workflow Agent",
-      role: "Automation Specialist",
-      description:
-        "Automates repetitive tasks and manages business workflows.",
-      status: "Active",
-      tasks: 15,
-      accuracy: "95%",
-      activity: "Running 5 automations",
-    },
-    {
-      id: 5,
-      name: "Meeting Agent",
-      role: "Scheduling Assistant",
-      description:
-        "Schedules meetings and manages calendars based on availability.",
-      status: "Idle",
-      tasks: 3,
-      accuracy: "97%",
-      activity: "Waiting for new requests",
-    },
-    {
-      id: 6,
-      name: "Analytics Agent",
-      role: "Data Analyst",
-      description:
-        "Analyzes workspace data and generates performance reports.",
-      status: "Idle",
-      tasks: 4,
-      accuracy: "93%",
-      activity: "Waiting for analysis",
-    },
-  ]);
+  const [agents, setAgents] = useState<Agent[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"All" | AgentStatus>(
-    "All",
-  );
+  const [statusFilter, setStatusFilter] =
+    useState<"All" | AgentStatus>("All");
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showActivityModal, setShowActivityModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showCreateModal, setShowCreateModal] =
+    useState(false);
 
-  const [selectedAgent, setSelectedAgent] = useState<Agent | null>(null);
+  const [showActivityModal, setShowActivityModal] =
+    useState(false);
+
+  const [showSettingsModal, setShowSettingsModal] =
+    useState(false);
+
+  const [selectedAgent, setSelectedAgent] =
+    useState<Agent | null>(null);
 
   const [agentName, setAgentName] = useState("");
   const [agentRole, setAgentRole] = useState("");
-  const [agentDescription, setAgentDescription] = useState("");
+  const [agentDescription, setAgentDescription] =
+    useState("");
 
-  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [editingAgent, setEditingAgent] =
+    useState<Agent | null>(null);
+
+  const API_URL = "http://localhost:3000/ai-agents";
+
+  /* =========================
+     LOAD AGENTS
+  ========================= */
+
+  const loadAgents = async () => {
+    try {
+      setLoading(true);
+
+      const response = await fetch(API_URL);
+
+      if (!response.ok) {
+        throw new Error("Failed to load AI agents");
+      }
+
+      const data: Agent[] = await response.json();
+
+      setAgents(data);
+    } catch (error) {
+      console.error("Failed to load AI agents:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAgents();
+  }, []);
+
+  /* =========================
+     FILTERING
+  ========================= */
 
   const filteredAgents = useMemo(() => {
     return agents.filter((agent) => {
+      const searchText = search
+        .toLowerCase()
+        .trim();
+
       const matchesSearch =
-        agent.name.toLowerCase().includes(search.toLowerCase()) ||
-        agent.role.toLowerCase().includes(search.toLowerCase()) ||
-        agent.description.toLowerCase().includes(search.toLowerCase());
+        searchText === "" ||
+        agent.name
+          .toLowerCase()
+          .includes(searchText) ||
+        agent.role
+          .toLowerCase()
+          .includes(searchText) ||
+        agent.description
+          .toLowerCase()
+          .includes(searchText);
 
       const matchesStatus =
-        statusFilter === "All" || agent.status === statusFilter;
+        statusFilter === "All" ||
+        agent.status === statusFilter;
 
       return matchesSearch && matchesStatus;
     });
   }, [agents, search, statusFilter]);
+
+  /* =========================
+     SUMMARY
+  ========================= */
 
   const activeAgents = agents.filter(
     (agent) => agent.status === "Active",
@@ -153,11 +139,16 @@ function AIAgents({
       ? (
           agents.reduce(
             (total, agent) =>
-              total + Number.parseFloat(agent.accuracy),
+              total +
+              Number.parseFloat(agent.accuracy),
             0,
           ) / agents.length
         ).toFixed(1)
       : "0.0";
+
+  /* =========================
+     FORM RESET
+  ========================= */
 
   const resetForm = () => {
     setAgentName("");
@@ -166,109 +157,240 @@ function AIAgents({
     setEditingAgent(null);
   };
 
-  const handleCreateAgent = () => {
-    if (!agentName.trim() || !agentRole.trim()) {
+  /* =========================
+     CREATE AGENT
+  ========================= */
+
+  const handleCreateAgent = async () => {
+    if (
+      !agentName.trim() ||
+      !agentRole.trim()
+    ) {
       return;
     }
 
-    const newAgent: Agent = {
-      id: Date.now(),
-      name: agentName.trim(),
-      role: agentRole.trim(),
-      description:
-        agentDescription.trim() ||
-        "AI agent ready to assist with workspace operations.",
-      status: "Idle",
-      tasks: 0,
-      accuracy: "100%",
-      activity: "Waiting for new requests",
-    };
+    try {
+      const response = await fetch(API_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          name: agentName.trim(),
+          role: agentRole.trim(),
+          description:
+            agentDescription.trim() ||
+            "AI agent ready to assist with workspace operations.",
+        }),
+      });
 
-    setAgents((currentAgents) => [...currentAgents, newAgent]);
-
-    resetForm();
-    setShowCreateModal(false);
-  };
-
-  const handleEditAgent = () => {
-    if (!editingAgent || !agentName.trim() || !agentRole.trim()) {
-      return;
-    }
-
-    setAgents((currentAgents) =>
-      currentAgents.map((agent) =>
-        agent.id === editingAgent.id
-          ? {
-              ...agent,
-              name: agentName.trim(),
-              role: agentRole.trim(),
-              description:
-                agentDescription.trim() || agent.description,
-            }
-          : agent,
-      ),
-    );
-
-    resetForm();
-    setShowSettingsModal(false);
-  };
-
-  const handleDeleteAgent = (id: number) => {
-    const confirmed = window.confirm(
-      "Are you sure you want to delete this AI Agent?",
-    );
-
-    if (!confirmed) {
-      return;
-    }
-
-    setAgents((currentAgents) =>
-      currentAgents.filter((agent) => agent.id !== id),
-    );
-
-    setShowSettingsModal(false);
-    setSelectedAgent(null);
-  };
-
-  const handleToggleStatus = (id: number) => {
-    setAgents((currentAgents) =>
-      currentAgents.map((agent) => {
-        if (agent.id !== id) {
-          return agent;
-        }
-
-        const newStatus: AgentStatus =
-          agent.status === "Active" ? "Idle" : "Active";
-
-        return {
-          ...agent,
-          status: newStatus,
-          activity:
-            newStatus === "Active"
-              ? "Ready for new tasks"
-              : "Waiting for new requests",
-        };
-      }),
-    );
-
-    setSelectedAgent((currentAgent) => {
-      if (!currentAgent || currentAgent.id !== id) {
-        return currentAgent;
+      if (!response.ok) {
+        throw new Error("Failed to create AI agent");
       }
 
-      const newStatus: AgentStatus =
-        currentAgent.status === "Active" ? "Idle" : "Active";
+      const newAgent: Agent =
+        await response.json();
 
-      return {
-        ...currentAgent,
-        status: newStatus,
-        activity:
-          newStatus === "Active"
-            ? "Ready for new tasks"
-            : "Waiting for new requests",
-      };
-    });
+      setAgents((currentAgents) => [
+        ...currentAgents,
+        newAgent,
+      ]);
+
+      resetForm();
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error(
+        "Failed to create AI agent:",
+        error,
+      );
+      alert(
+        "Could not create AI Agent. Please check the backend.",
+      );
+    }
   };
+
+  /* =========================
+     EDIT AGENT
+  ========================= */
+
+  const handleEditAgent = async () => {
+    if (
+      !editingAgent ||
+      !agentName.trim() ||
+      !agentRole.trim()
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${editingAgent.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: agentName.trim(),
+            role: agentRole.trim(),
+            description:
+              agentDescription.trim() ||
+              editingAgent.description,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to update AI agent");
+      }
+
+      const updatedAgent: Agent =
+        await response.json();
+
+      setAgents((currentAgents) =>
+        currentAgents.map((agent) =>
+          agent.id === updatedAgent.id
+            ? updatedAgent
+            : agent,
+        ),
+      );
+
+      setSelectedAgent(updatedAgent);
+      resetForm();
+      setShowSettingsModal(false);
+    } catch (error) {
+      console.error(
+        "Failed to update AI agent:",
+        error,
+      );
+
+      alert(
+        "Could not update AI Agent. Please check the backend.",
+      );
+    }
+  };
+
+  /* =========================
+     DELETE AGENT
+  ========================= */
+
+  const handleDeleteAgent = async (
+    id: number,
+  ) => {
+    const agent = agents.find(
+      (item) => item.id === id,
+    );
+
+    if (!agent) return;
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${agent.name}"?`,
+    );
+
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${id}`,
+        {
+          method: "DELETE",
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to delete AI agent");
+      }
+
+      setAgents((currentAgents) =>
+        currentAgents.filter(
+          (item) => item.id !== id,
+        ),
+      );
+
+      setShowSettingsModal(false);
+      setShowActivityModal(false);
+      setSelectedAgent(null);
+    } catch (error) {
+      console.error(
+        "Failed to delete AI agent:",
+        error,
+      );
+
+      alert(
+        "Could not delete AI Agent. Please check the backend.",
+      );
+    }
+  };
+
+  /* =========================
+     TOGGLE STATUS
+  ========================= */
+
+  const handleToggleStatus = async (
+    id: number,
+  ) => {
+    const agent = agents.find(
+      (item) => item.id === id,
+    );
+
+    if (!agent) return;
+
+    const newStatus: AgentStatus =
+      agent.status === "Active"
+        ? "Idle"
+        : "Active";
+
+    try {
+      const response = await fetch(
+        `${API_URL}/${id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: newStatus,
+          }),
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to update agent status",
+        );
+      }
+
+      const updatedAgent: Agent =
+        await response.json();
+
+      setAgents((currentAgents) =>
+        currentAgents.map((item) =>
+          item.id === id
+            ? updatedAgent
+            : item,
+        ),
+      );
+
+      setSelectedAgent((currentAgent) =>
+        currentAgent?.id === id
+          ? updatedAgent
+          : currentAgent,
+      );
+    } catch (error) {
+      console.error(
+        "Failed to update AI agent status:",
+        error,
+      );
+
+      alert(
+        "Could not update AI Agent status. Please check the backend.",
+      );
+    }
+  };
+
+  /* =========================
+     MODALS
+  ========================= */
 
   const openActivity = (agent: Agent) => {
     setSelectedAgent(agent);
@@ -290,9 +412,60 @@ function AIAgents({
     setShowCreateModal(false);
     setShowActivityModal(false);
     setShowSettingsModal(false);
+
     setSelectedAgent(null);
+
     resetForm();
   };
+
+  /* =========================
+     LOADING
+  ========================= */
+
+  if (loading) {
+    return (
+      <div
+        className="min-h-[calc(100vh-80px)] p-8"
+        style={{
+          backgroundColor: colors.background,
+          color: colors.text,
+        }}
+      >
+        <div
+          className="flex min-h-[400px] items-center justify-center rounded-2xl border"
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }}
+        >
+          <div className="text-center">
+            <div
+              className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl"
+              style={{
+                backgroundColor: colors.primary,
+                color: colors.black,
+              }}
+            >
+              <Bot size={24} />
+            </div>
+
+            <p className="text-sm font-semibold">
+              Loading AI Agents...
+            </p>
+
+            <p
+              className="mt-1 text-xs"
+              style={{
+                color: colors.textMuted,
+              }}
+            >
+              Connecting to your AI workforce
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -303,6 +476,7 @@ function AIAgents({
       }}
     >
       {/* HEADER */}
+
       <div className="mb-7 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div
@@ -337,7 +511,7 @@ function AIAgents({
             resetForm();
             setShowCreateModal(true);
           }}
-          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition-opacity hover:opacity-90"
+          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold transition hover:scale-[1.02]"
           style={{
             backgroundColor: colors.primary,
             color: colors.black,
@@ -349,6 +523,7 @@ function AIAgents({
       </div>
 
       {/* SUMMARY */}
+
       <div className="mb-6 grid grid-cols-4 gap-4">
         <div
           className="rounded-2xl border p-5"
@@ -434,130 +609,196 @@ function AIAgents({
             Avg. Accuracy
           </p>
 
-          <p className="mt-2 text-3xl font-bold">
+          <p
+            className="mt-2 text-3xl font-bold"
+            style={{
+              color: colors.primary,
+            }}
+          >
             {averageAccuracy}%
           </p>
         </div>
       </div>
 
       {/* SEARCH + FILTER */}
+
+      <div className="mb-5 flex items-center gap-3">
+        <div
+          className="flex flex-1 items-center gap-3 rounded-xl border px-4 py-3"
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }}
+        >
+          <Search
+            size={18}
+            style={{
+              color: colors.textMuted,
+            }}
+          />
+
+          <input
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Search AI agents..."
+            className="w-full bg-transparent text-sm outline-none"
+            style={{
+              color: colors.text,
+            }}
+          />
+        </div>
+
+        <div
+          className="flex items-center gap-1 rounded-xl border p-1"
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }}
+        >
+          {(
+            ["All", "Active", "Idle"] as const
+          ).map((filter) => (
+            <button
+              key={filter}
+              type="button"
+              onClick={() =>
+                setStatusFilter(filter)
+              }
+              className="rounded-lg px-4 py-2 text-xs font-semibold"
+              style={{
+                backgroundColor:
+                  statusFilter === filter
+                    ? colors.primary
+                    : "transparent",
+                color:
+                  statusFilter === filter
+                    ? colors.black
+                    : colors.textMuted,
+              }}
+            >
+              {filter} Agents
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* OPERATIONAL STATUS */}
+
       <div
-        className="mb-5 flex items-center justify-between gap-4 rounded-2xl border p-4"
+        className="mb-5 flex items-center gap-3 rounded-xl border px-4 py-3"
         style={{
           backgroundColor: colors.surface,
           borderColor: colors.border,
         }}
       >
-        <div className="flex items-center gap-3">
-          <div
-            className="flex w-80 items-center gap-2 rounded-xl border px-3 py-2.5"
-            style={{
-              backgroundColor: colors.background,
-              borderColor: colors.border,
-            }}
-          >
-            <Search
-              size={17}
-              style={{
-                color: colors.textMuted,
-              }}
-            />
-
-            <input
-              value={search}
-              onChange={(event) =>
-                setSearch(event.target.value)
-              }
-              placeholder="Search AI agents..."
-              className="flex-1 bg-transparent text-sm outline-none"
-              style={{
-                color: colors.text,
-              }}
-            />
-          </div>
-
-          <select
-            value={statusFilter}
-            onChange={(event) =>
-              setStatusFilter(
-                event.target.value as "All" | AgentStatus,
-              )
-            }
-            className="rounded-xl border px-4 py-2.5 text-sm outline-none"
-            style={{
-              backgroundColor: colors.background,
-              borderColor: colors.border,
-              color: colors.text,
-            }}
-          >
-            <option value="All">All Agents</option>
-            <option value="Active">Active</option>
-            <option value="Idle">Idle</option>
-          </select>
-        </div>
-
         <div
-          className="flex items-center gap-2 text-xs"
+          className="flex h-8 w-8 items-center justify-center rounded-lg"
           style={{
-            color: colors.textMuted,
+            backgroundColor:
+              "rgba(57,255,136,0.10)",
           }}
         >
-          <Activity size={15} />
-          AI workforce is operational
-        </div>
-      </div>
-
-      {/* RESULT INFO */}
-      <div className="mb-4 flex items-center justify-between">
-        <p
-          className="text-xs"
-          style={{
-            color: colors.textMuted,
-          }}
-        >
-          Showing {filteredAgents.length} of {agents.length} agents
-        </p>
-
-        {search && (
-          <button
-            type="button"
-            onClick={() => setSearch("")}
-            className="text-xs font-semibold"
+          <CheckCircle2
+            size={17}
             style={{
               color: colors.primary,
             }}
+          />
+        </div>
+
+        <div>
+          <p className="text-sm font-semibold">
+            AI workforce is operational
+          </p>
+
+          <p
+            className="text-xs"
+            style={{
+              color: colors.textMuted,
+            }}
           >
-            Clear search
-          </button>
-        )}
+            Showing {filteredAgents.length} of{" "}
+            {agents.length} agents
+          </p>
+        </div>
       </div>
 
-      {/* AGENTS GRID */}
-      {filteredAgents.length > 0 ? (
-        <div className="grid grid-cols-2 gap-5">
+      {/* EMPTY */}
+
+      {filteredAgents.length === 0 ? (
+        <div
+          className="rounded-2xl border p-12 text-center"
+          style={{
+            backgroundColor: colors.surface,
+            borderColor: colors.border,
+          }}
+        >
+          <Bot
+            size={42}
+            className="mx-auto mb-4"
+            style={{
+              color: colors.textMuted,
+            }}
+          />
+
+          <h3 className="text-lg font-semibold">
+            No AI agents found
+          </h3>
+
+          <p
+            className="mt-1 text-sm"
+            style={{
+              color: colors.textMuted,
+            }}
+          >
+            Try another search or filter.
+          </p>
+
+          {(search || statusFilter !== "All") && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setStatusFilter("All");
+              }}
+              className="mt-4 rounded-xl px-4 py-2 text-xs font-bold"
+              style={{
+                backgroundColor: colors.primary,
+                color: colors.black,
+              }}
+            >
+              Clear Search
+            </button>
+          )}
+        </div>
+      ) : (
+        /* AGENT GRID */
+
+        <div className="grid grid-cols-1 gap-5 xl:grid-cols-2">
           {filteredAgents.map((agent) => (
             <div
               key={agent.id}
-              className="rounded-2xl border p-6 transition-transform hover:-translate-y-0.5"
+              className="rounded-2xl border p-5"
               style={{
                 backgroundColor: colors.surface,
                 borderColor: colors.border,
               }}
             >
-              {/* TOP */}
+              {/* CARD HEADER */}
+
               <div className="flex items-start justify-between">
                 <div className="flex items-center gap-3">
                   <div
-                    className="flex h-12 w-12 items-center justify-center rounded-xl"
+                    className="flex h-11 w-11 items-center justify-center rounded-xl"
                     style={{
                       backgroundColor:
-                        themeMode === "dark"
-                          ? "rgba(57,255,136,0.10)"
-                          : "rgba(22,163,74,0.10)",
+                        "rgba(57,255,136,0.10)",
                     }}
                   >
                     <Bot
-                      size={23}
+                      size={21}
                       style={{
                         color: colors.primary,
                       }}
@@ -565,12 +806,12 @@ function AIAgents({
                   </div>
 
                   <div>
-                    <h3 className="text-sm font-bold">
+                    <h3 className="text-base font-bold">
                       {agent.name}
                     </h3>
 
                     <p
-                      className="mt-1 text-[10px]"
+                      className="text-xs"
                       style={{
                         color: colors.textMuted,
                       }}
@@ -580,86 +821,96 @@ function AIAgents({
                   </div>
                 </div>
 
-                <button
-                  type="button"
-                  onClick={() => openSettings(agent)}
-                  className="rounded-lg p-2 transition-opacity hover:opacity-70"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                  title="Agent settings"
-                >
-                  <MoreHorizontal size={18} />
-                </button>
-              </div>
-
-              {/* STATUS */}
-              <div className="mt-5 flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleToggleStatus(agent.id)
-                  }
-                  className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold"
-                  style={{
-                    backgroundColor:
-                      agent.status === "Active"
-                        ? themeMode === "dark"
-                          ? "rgba(57,255,136,0.10)"
-                          : "rgba(22,163,74,0.10)"
-                        : colors.surfaceLight,
-                    color:
-                      agent.status === "Active"
-                        ? colors.primary
-                        : colors.textMuted,
-                  }}
-                  title="Toggle agent status"
-                >
-                  <span
-                    className="h-1.5 w-1.5 rounded-full"
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      handleToggleStatus(agent.id)
+                    }
+                    className="flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-[10px] font-bold"
                     style={{
                       backgroundColor:
+                        agent.status === "Active"
+                          ? "rgba(57,255,136,0.10)"
+                          : colors.surfaceLight,
+                      color:
                         agent.status === "Active"
                           ? colors.primary
                           : colors.textMuted,
                     }}
-                  />
+                  >
+                    <span
+                      className="h-1.5 w-1.5 rounded-full"
+                      style={{
+                        backgroundColor:
+                          agent.status === "Active"
+                            ? colors.primary
+                            : colors.textMuted,
+                      }}
+                    />
 
-                  {agent.status}
-                </button>
+                    {agent.status}
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openSettings(agent)
+                    }
+                    className="rounded-lg p-2"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    <MoreHorizontal size={18} />
+                  </button>
+                </div>
+              </div>
+
+              {/* AI POWERED */}
+
+              <div className="mt-4 flex items-center gap-2">
+                <Zap
+                  size={14}
+                  style={{
+                    color: colors.primary,
+                  }}
+                />
 
                 <span
-                  className="flex items-center gap-1 text-[10px]"
+                  className="text-[10px] font-bold"
                   style={{
-                    color: colors.textMuted,
+                    color: colors.primary,
                   }}
                 >
-                  <Brain size={13} />
                   AI Powered
                 </span>
               </div>
 
               {/* DESCRIPTION */}
+
               <p
-                className="mt-5 text-xs leading-5"
+                className="mt-3 min-h-[40px] text-sm leading-6"
                 style={{
-                  color: colors.textSecondary,
+                  color: colors.textMuted,
                 }}
               >
                 {agent.description}
               </p>
 
               {/* STATS */}
+
               <div className="mt-5 grid grid-cols-2 gap-3">
                 <div
                   className="rounded-xl p-3"
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    backgroundColor:
+                      colors.surfaceLight,
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <Zap
-                      size={14}
+                    <Activity
+                      size={15}
                       style={{
                         color: colors.primary,
                       }}
@@ -675,7 +926,7 @@ function AIAgents({
                     </span>
                   </div>
 
-                  <p className="mt-2 text-lg font-bold">
+                  <p className="mt-1 text-lg font-bold">
                     {agent.tasks}
                   </p>
                 </div>
@@ -683,12 +934,13 @@ function AIAgents({
                 <div
                   className="rounded-xl p-3"
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    backgroundColor:
+                      colors.surfaceLight,
                   }}
                 >
                   <div className="flex items-center gap-2">
-                    <CheckCircle2
-                      size={14}
+                    <Brain
+                      size={15}
                       style={{
                         color: colors.primary,
                       }}
@@ -704,30 +956,26 @@ function AIAgents({
                     </span>
                   </div>
 
-                  <p className="mt-2 text-lg font-bold">
+                  <p className="mt-1 text-lg font-bold">
                     {agent.accuracy}
                   </p>
                 </div>
               </div>
 
               {/* ACTIVITY */}
-              <div
-                className="mt-4 flex items-center gap-2 rounded-xl p-3"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
+
+              <div className="mt-4 flex items-center gap-2">
                 <Clock3
                   size={14}
                   style={{
-                    color: colors.primary,
+                    color: colors.textMuted,
                   }}
                 />
 
                 <span
-                  className="text-[10px]"
+                  className="truncate text-xs"
                   style={{
-                    color: colors.textSecondary,
+                    color: colors.textMuted,
                   }}
                 >
                   {agent.activity}
@@ -735,83 +983,76 @@ function AIAgents({
               </div>
 
               {/* ACTIONS */}
-              <div className="mt-5 flex gap-2">
+
+              <div className="mt-5 flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => openActivity(agent)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold transition-opacity hover:opacity-80"
+                  onClick={() =>
+                    openActivity(agent)
+                  }
+                  className="flex flex-1 items-center justify-center gap-2 rounded-xl border px-4 py-2.5 text-xs font-bold"
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    backgroundColor:
+                      colors.surfaceLight,
+                    borderColor: colors.border,
                     color: colors.text,
                   }}
                 >
-                  <Activity size={14} />
+                  <Activity size={15} />
                   View Activity
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => openSettings(agent)}
-                  className="flex items-center justify-center rounded-xl px-4 transition-opacity hover:opacity-80"
+                  onClick={() =>
+                    openSettings(agent)
+                  }
+                  className="flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold"
                   style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.textMuted,
+                    backgroundColor:
+                      colors.primary,
+                    color: colors.black,
                   }}
-                  title="Settings"
                 >
                   <Settings size={15} />
+                  Settings
                 </button>
               </div>
             </div>
           ))}
         </div>
-      ) : (
-        <div
-          className="rounded-2xl border p-12 text-center"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }}
-        >
-          <Bot
-            size={35}
-            className="mx-auto mb-3"
-            style={{
-              color: colors.textMuted,
-            }}
-          />
-
-          <h3 className="text-sm font-bold">
-            No AI agents found
-          </h3>
-
-          <p
-            className="mt-2 text-xs"
-            style={{
-              color: colors.textMuted,
-            }}
-          >
-            Try another search or create a new AI agent.
-          </p>
-        </div>
       )}
 
-      {/* CREATE / EDIT MODAL */}
-      {(showCreateModal || showSettingsModal) && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+      {/* =========================
+          CREATE / EDIT MODAL
+      ========================= */}
+
+      {(showCreateModal ||
+        showSettingsModal) && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-6"
+          style={{
+            backgroundColor:
+              "rgba(0,0,0,0.65)",
+          }}
+          onClick={closeModals}
+        >
           <div
-            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl"
+            className="w-full max-w-lg rounded-2xl border p-6"
             style={{
               backgroundColor: colors.surface,
               borderColor: colors.border,
             }}
+            onClick={(event) =>
+              event.stopPropagation()
+            }
           >
-            <div className="mb-6 flex items-center justify-between">
+            <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-lg font-bold">
+                <h2 className="text-xl font-bold">
                   {showCreateModal
                     ? "Create AI Agent"
-                    : "Agent Settings"}
+                    : "AI Agent Settings"}
                 </h2>
 
                 <p
@@ -821,8 +1062,8 @@ function AIAgents({
                   }}
                 >
                   {showCreateModal
-                    ? "Create a new AI worker for your office."
-                    : "Update this AI agent's configuration."}
+                    ? "Add a new intelligent agent to your workspace."
+                    : "Update your AI agent configuration."}
                 </p>
               </div>
 
@@ -834,16 +1075,16 @@ function AIAgents({
                   color: colors.textMuted,
                 }}
               >
-                <X size={18} />
+                <X size={19} />
               </button>
             </div>
 
-            <div className="space-y-4">
+            <div className="mt-6 space-y-4">
               <div>
                 <label
                   className="mb-2 block text-xs font-semibold"
                   style={{
-                    color: colors.textSecondary,
+                    color: colors.textMuted,
                   }}
                 >
                   Agent Name
@@ -852,12 +1093,15 @@ function AIAgents({
                 <input
                   value={agentName}
                   onChange={(event) =>
-                    setAgentName(event.target.value)
+                    setAgentName(
+                      event.target.value,
+                    )
                   }
-                  placeholder="e.g. Email Agent"
+                  placeholder="e.g. Marketing Agent"
                   className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
                   style={{
-                    backgroundColor: colors.background,
+                    backgroundColor:
+                      colors.surfaceLight,
                     borderColor: colors.border,
                     color: colors.text,
                   }}
@@ -868,7 +1112,7 @@ function AIAgents({
                 <label
                   className="mb-2 block text-xs font-semibold"
                   style={{
-                    color: colors.textSecondary,
+                    color: colors.textMuted,
                   }}
                 >
                   Role
@@ -877,12 +1121,15 @@ function AIAgents({
                 <input
                   value={agentRole}
                   onChange={(event) =>
-                    setAgentRole(event.target.value)
+                    setAgentRole(
+                      event.target.value,
+                    )
                   }
-                  placeholder="e.g. Email Specialist"
+                  placeholder="e.g. Marketing Specialist"
                   className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
                   style={{
-                    backgroundColor: colors.background,
+                    backgroundColor:
+                      colors.surfaceLight,
                     borderColor: colors.border,
                     color: colors.text,
                   }}
@@ -893,7 +1140,7 @@ function AIAgents({
                 <label
                   className="mb-2 block text-xs font-semibold"
                   style={{
-                    color: colors.textSecondary,
+                    color: colors.textMuted,
                   }}
                 >
                   Description
@@ -902,13 +1149,16 @@ function AIAgents({
                 <textarea
                   value={agentDescription}
                   onChange={(event) =>
-                    setAgentDescription(event.target.value)
+                    setAgentDescription(
+                      event.target.value,
+                    )
                   }
-                  placeholder="Describe what this agent does..."
+                  placeholder="Describe what this AI agent does..."
                   rows={4}
                   className="w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none"
                   style={{
-                    backgroundColor: colors.background,
+                    backgroundColor:
+                      colors.surfaceLight,
                     borderColor: colors.border,
                     color: colors.text,
                   }}
@@ -920,10 +1170,10 @@ function AIAgents({
               <button
                 type="button"
                 onClick={closeModals}
-                className="rounded-xl px-5 py-2.5 text-xs font-semibold"
+                className="rounded-xl border px-5 py-2.5 text-xs font-bold"
                 style={{
-                  backgroundColor: colors.surfaceLight,
-                  color: colors.text,
+                  borderColor: colors.border,
+                  color: colors.textMuted,
                 }}
               >
                 Cancel
@@ -936,12 +1186,10 @@ function AIAgents({
                     ? handleCreateAgent
                     : handleEditAgent
                 }
-                disabled={
-                  !agentName.trim() || !agentRole.trim()
-                }
-                className="rounded-xl px-5 py-2.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-xl px-5 py-2.5 text-xs font-bold"
                 style={{
-                  backgroundColor: colors.primary,
+                  backgroundColor:
+                    colors.primary,
                   color: colors.black,
                 }}
               >
@@ -950,223 +1198,344 @@ function AIAgents({
                   : "Save Changes"}
               </button>
             </div>
-
-            {/* DELETE + STATUS */}
-            {showSettingsModal && selectedAgent && (
-              <div
-                className="mt-6 flex items-center justify-between border-t pt-5"
-                style={{
-                  borderColor: colors.border,
-                }}
-              >
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleToggleStatus(selectedAgent.id)
-                  }
-                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold"
-                  style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.text,
-                  }}
-                >
-                  <Power size={14} />
-                  {selectedAgent.status === "Active"
-                    ? "Set Idle"
-                    : "Activate"}
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    handleDeleteAgent(selectedAgent.id)
-                  }
-                  className="flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-semibold"
-                  style={{
-                    backgroundColor:
-                      themeMode === "dark"
-                        ? "rgba(239,68,68,0.12)"
-                        : "rgba(239,68,68,0.08)",
-                    color: "#EF4444",
-                  }}
-                >
-                  <Trash2 size={14} />
-                  Delete Agent
-                </button>
-              </div>
-            )}
           </div>
         </div>
       )}
 
-      {/* ACTIVITY MODAL */}
-      {showActivityModal && selectedAgent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            className="w-full max-w-lg rounded-2xl border p-6 shadow-2xl"
-            style={{
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            }}
-          >
-            <div className="mb-6 flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div
-                  className="flex h-11 w-11 items-center justify-center rounded-xl"
-                  style={{
-                    backgroundColor:
-                      themeMode === "dark"
-                        ? "rgba(57,255,136,0.10)"
-                        : "rgba(22,163,74,0.10)",
-                  }}
-                >
-                  <Activity
-                    size={20}
-                    style={{
-                      color: colors.primary,
-                    }}
-                  />
-                </div>
+      {/* =========================
+          ACTIVITY MODAL
+      ========================= */}
 
+      {showActivityModal &&
+        selectedAgent && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-6"
+            style={{
+              backgroundColor:
+                "rgba(0,0,0,0.65)",
+            }}
+            onClick={closeModals}
+          >
+            <div
+              className="w-full max-w-md rounded-2xl border p-6"
+              style={{
+                backgroundColor: colors.surface,
+                borderColor: colors.border,
+              }}
+              onClick={(event) =>
+                event.stopPropagation()
+              }
+            >
+              <div className="flex items-center justify-between">
                 <div>
-                  <h2 className="text-lg font-bold">
-                    {selectedAgent.name}
+                  <h2 className="text-xl font-bold">
+                    Agent Activity
                   </h2>
 
                   <p
-                    className="text-xs"
+                    className="mt-1 text-xs"
                     style={{
                       color: colors.textMuted,
                     }}
                   >
-                    Agent activity
+                    {selectedAgent.name}
                   </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeModals}
+                  className="rounded-lg p-2"
+                  style={{
+                    color: colors.textMuted,
+                  }}
+                >
+                  <X size={19} />
+                </button>
+              </div>
+
+              <div className="mt-6 space-y-3">
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor:
+                      colors.surfaceLight,
+                  }}
+                >
+                  <p
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Current Status
+                  </p>
+
+                  <p
+                    className="mt-1 text-sm font-bold"
+                    style={{
+                      color:
+                        selectedAgent.status ===
+                        "Active"
+                          ? colors.primary
+                          : colors.text,
+                    }}
+                  >
+                    {selectedAgent.status}
+                  </p>
+                </div>
+
+                <div
+                  className="rounded-xl p-4"
+                  style={{
+                    backgroundColor:
+                      colors.surfaceLight,
+                  }}
+                >
+                  <p
+                    className="text-[10px]"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Current Activity
+                  </p>
+
+                  <p className="mt-1 text-sm font-semibold">
+                    {selectedAgent.activity}
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div
+                    className="rounded-xl p-4"
+                    style={{
+                      backgroundColor:
+                        colors.surfaceLight,
+                    }}
+                  >
+                    <p
+                      className="text-[10px]"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      Tasks Handled
+                    </p>
+
+                    <p className="mt-1 text-xl font-bold">
+                      {selectedAgent.tasks}
+                    </p>
+                  </div>
+
+                  <div
+                    className="rounded-xl p-4"
+                    style={{
+                      backgroundColor:
+                        colors.surfaceLight,
+                    }}
+                  >
+                    <p
+                      className="text-[10px]"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      Accuracy
+                    </p>
+
+                    <p
+                      className="mt-1 text-xl font-bold"
+                      style={{
+                        color: colors.primary,
+                      }}
+                    >
+                      {selectedAgent.accuracy}
+                    </p>
+                  </div>
                 </div>
               </div>
 
               <button
                 type="button"
-                onClick={closeModals}
-                className="rounded-lg p-2"
+                onClick={() =>
+                  handleToggleStatus(
+                    selectedAgent.id,
+                  )
+                }
+                className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-xs font-bold"
                 style={{
-                  color: colors.textMuted,
+                  backgroundColor:
+                    colors.primary,
+                  color: colors.black,
                 }}
               >
-                <X size={18} />
+                <Power size={15} />
+
+                {selectedAgent.status ===
+                "Active"
+                  ? "Set Idle"
+                  : "Activate Agent"}
               </button>
             </div>
+          </div>
+        )}
 
+      {/* =========================
+          SETTINGS ACTION MODAL
+      ========================= */}
+
+      {showSettingsModal &&
+        selectedAgent && (
+          <div
+            className="fixed inset-0 z-[60] flex items-center justify-center p-6"
+            style={{
+              backgroundColor:
+                "rgba(0,0,0,0.65)",
+            }}
+            onClick={closeModals}
+          >
             <div
-              className="rounded-xl border p-4"
+              className="w-full max-w-lg rounded-2xl border p-6"
               style={{
-                backgroundColor: colors.surfaceLight,
+                backgroundColor: colors.surface,
                 borderColor: colors.border,
               }}
+              onClick={(event) =>
+                event.stopPropagation()
+              }
             >
               <div className="flex items-center justify-between">
-                <span
-                  className="text-xs"
+                <div>
+                  <h2 className="text-xl font-bold">
+                    Agent Settings
+                  </h2>
+
+                  <p
+                    className="mt-1 text-xs"
+                    style={{
+                      color: colors.textMuted,
+                    }}
+                  >
+                    Manage {selectedAgent.name}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={closeModals}
+                  className="rounded-lg p-2"
                   style={{
                     color: colors.textMuted,
                   }}
                 >
-                  Current status
-                </span>
-
-                <span
-                  className="rounded-lg px-3 py-1 text-[10px] font-semibold"
-                  style={{
-                    backgroundColor:
-                      selectedAgent.status === "Active"
-                        ? themeMode === "dark"
-                          ? "rgba(57,255,136,0.10)"
-                          : "rgba(22,163,74,0.10)"
-                        : colors.background,
-                    color:
-                      selectedAgent.status === "Active"
-                        ? colors.primary
-                        : colors.textMuted,
-                  }}
-                >
-                  {selectedAgent.status}
-                </span>
+                  <X size={19} />
+                </button>
               </div>
 
-              <div className="mt-5 space-y-4">
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    Current activity
-                  </span>
-
-                  <span className="text-xs font-semibold">
-                    {selectedAgent.activity}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    Tasks handled
-                  </span>
-
-                  <span className="text-xs font-bold">
-                    {selectedAgent.tasks}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span
-                    className="text-xs"
-                    style={{
-                      color: colors.textMuted,
-                    }}
-                  >
-                    Accuracy
-                  </span>
-
-                  <span
-                    className="text-xs font-bold"
+              <div className="mt-6 space-y-3">
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleToggleStatus(
+                      selectedAgent.id,
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-xl border p-4 text-left"
+                  style={{
+                    backgroundColor:
+                      colors.surfaceLight,
+                    borderColor: colors.border,
+                  }}
+                >
+                  <Power
+                    size={18}
                     style={{
                       color: colors.primary,
                     }}
-                  >
-                    {selectedAgent.accuracy}
-                  </span>
-                </div>
+                  />
+
+                  <div>
+                    <p className="text-sm font-semibold">
+                      {selectedAgent.status ===
+                      "Active"
+                        ? "Set Idle"
+                        : "Activate Agent"}
+                    </p>
+
+                    <p
+                      className="text-xs"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      Change the current agent status.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    handleDeleteAgent(
+                      selectedAgent.id,
+                    )
+                  }
+                  className="flex w-full items-center gap-3 rounded-xl border p-4 text-left"
+                  style={{
+                    backgroundColor:
+                      "rgba(255,80,80,0.06)",
+                    borderColor:
+                      "rgba(255,80,80,0.25)",
+                  }}
+                >
+                  <Trash2
+                    size={18}
+                    style={{
+                      color: "#ff5555",
+                    }}
+                  />
+
+                  <div>
+                    <p
+                      className="text-sm font-semibold"
+                      style={{
+                        color: "#ff5555",
+                      }}
+                    >
+                      Delete Agent
+                    </p>
+
+                    <p
+                      className="text-xs"
+                      style={{
+                        color: colors.textMuted,
+                      }}
+                    >
+                      Permanently remove this AI agent.
+                    </p>
+                  </div>
+                </button>
+              </div>
+
+              <div className="mt-5 flex justify-end">
+                <button
+                  type="button"
+                  onClick={closeModals}
+                  className="rounded-xl border px-5 py-2.5 text-xs font-bold"
+                  style={{
+                    borderColor: colors.border,
+                    color: colors.textMuted,
+                  }}
+                >
+                  Close
+                </button>
               </div>
             </div>
-
-            <button
-              type="button"
-              onClick={() =>
-                handleToggleStatus(selectedAgent.id)
-              }
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold"
-              style={{
-                backgroundColor: colors.primary,
-                color: colors.black,
-              }}
-            >
-              <Power size={15} />
-              {selectedAgent.status === "Active"
-                ? "Set Agent Idle"
-                : "Activate Agent"}
-            </button>
           </div>
-        </div>
-      )}
+        )}
     </div>
   );
 }
 
 export default AIAgents;
-
