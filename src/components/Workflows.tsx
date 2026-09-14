@@ -1,23 +1,23 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import {
-  Workflow,
+  Activity,
+  Edit3,
+  MoreHorizontal,
+  Pause,
+  Play,
   Plus,
   Search,
-  Play,
-  Pause,
-  CheckCircle2,
-  
-  Bot,
-  MoreHorizontal,
-  Zap,
-  Activity,
-  Pencil,
+  Settings,
   Trash2,
   X,
-  Power,
+  Zap,
 } from "lucide-react";
 
 import { darkColors, lightColors } from "../theme/colors";
+
+type ThemeMode = "dark" | "light";
+
+const API_URL = "http://localhost:3000";
 
 type WorkflowStatus = "Running" | "Paused" | "Completed";
 
@@ -27,95 +27,73 @@ type WorkflowItem = {
   description: string;
   status: WorkflowStatus;
   runs: number;
-  success: string;
+  success: number;
   agent: string;
   lastRun: string;
 };
 
-function Workflows({
-  themeMode,
-}: {
-  themeMode: "dark" | "light";
-}) {
-  const colors = themeMode === "dark" ? darkColors : lightColors;
+type WorkflowApiItem = {
+  id: number;
+  name: string;
+  description: string;
+  status: string;
+  steps: number;
+  completedRuns: number;
+  successRate: number;
+  agent: string;
+  activity: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
-  const [workflows, setWorkflows] = useState<WorkflowItem[]>([
-    {
-      id: 1,
-      name: "Daily Task Management",
-      description:
-        "Automatically organize and assign daily tasks to the right team members.",
-      status: "Running",
-      runs: 128,
-      success: "98%",
-      agent: "Manager Agent",
-      lastRun: "2 min ago",
-    },
-    {
-      id: 2,
-      name: "Document Processing",
-      description:
-        "Process uploaded documents, extract information and generate summaries.",
-      status: "Running",
-      runs: 86,
-      success: "97%",
-      agent: "Document Agent",
-      lastRun: "8 min ago",
-    },
-    {
-      id: 3,
-      name: "Market Research",
-      description:
-        "Collect research data and prepare structured market analysis reports.",
-      status: "Running",
-      runs: 54,
-      success: "95%",
-      agent: "Research Agent",
-      lastRun: "18 min ago",
-    },
-    {
-      id: 4,
-      name: "Meeting Scheduler",
-      description:
-        "Find suitable meeting times and automatically schedule team meetings.",
-      status: "Paused",
-      runs: 42,
-      success: "99%",
-      agent: "Meeting Agent",
-      lastRun: "Yesterday",
-    },
-    {
-      id: 5,
-      name: "Weekly Performance Report",
-      description:
-        "Generate weekly productivity and project performance reports.",
-      status: "Completed",
-      runs: 31,
-      success: "100%",
-      agent: "Analytics Agent",
-      lastRun: "Aug 18",
-    },
-    {
-      id: 6,
-      name: "Client Follow-up",
-      description:
-        "Automatically prepare follow-up tasks after client meetings.",
-      status: "Running",
-      runs: 67,
-      success: "96%",
-      agent: "Workflow Agent",
-      lastRun: "32 min ago",
-    },
-  ]);
+type WorkflowsProps = {
+  themeMode: ThemeMode;
+};
+
+function mapWorkflow(item: WorkflowApiItem): WorkflowItem {
+  return {
+    id: item.id,
+    name: item.name,
+    description: item.description,
+    status:
+      item.status === "Active"
+        ? "Running"
+        : item.status === "Paused"
+          ? "Paused"
+          : "Completed",
+    runs: item.completedRuns,
+    success: item.successRate,
+    agent: item.agent,
+    lastRun: item.activity,
+  };
+}
+
+export default function Workflows({
+  themeMode,
+}: WorkflowsProps) {
+  const colors =
+    themeMode === "dark" ? darkColors : lightColors;
+
+  const [workflows, setWorkflows] = useState<WorkflowItem[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<
-    "All" | WorkflowStatus
+
+  const [filter, setFilter] = useState<
+    "All" | "Running" | "Paused" | "Completed"
   >("All");
 
-  const [showModal, setShowModal] = useState(false);
-  const [showActivity, setShowActivity] = useState(false);
-  const [showSettings, setShowSettings] = useState(false);
+  const [showCreateModal, setShowCreateModal] =
+    useState(false);
+
+  const [showEditModal, setShowEditModal] =
+    useState(false);
+
+  const [showActivityModal, setShowActivityModal] =
+    useState(false);
+
+  const [showSettingsModal, setShowSettingsModal] =
+    useState(false);
 
   const [selectedWorkflow, setSelectedWorkflow] =
     useState<WorkflowItem | null>(null);
@@ -123,215 +101,490 @@ function Workflows({
   const [editingWorkflow, setEditingWorkflow] =
     useState<WorkflowItem | null>(null);
 
-  const [form, setForm] = useState({
-    name: "",
-    description: "",
-    agent: "Manager Agent",
-    status: "Running" as WorkflowStatus,
-  });
+  const [openMenuId, setOpenMenuId] =
+    useState<number | null>(null);
 
-  const filteredWorkflows = useMemo(() => {
-    return workflows.filter((workflow) => {
-      const matchesSearch =
-        workflow.name
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        workflow.description
-          .toLowerCase()
-          .includes(search.toLowerCase()) ||
-        workflow.agent
-          .toLowerCase()
-          .includes(search.toLowerCase());
+  const [newName, setNewName] = useState("");
+  const [newDescription, setNewDescription] =
+    useState("");
+  const [newAgent, setNewAgent] =
+    useState("Manager Agent");
 
-      const matchesStatus =
-        statusFilter === "All" ||
-        workflow.status === statusFilter;
+  const [editName, setEditName] = useState("");
+  const [editDescription, setEditDescription] =
+    useState("");
+  const [editAgent, setEditAgent] =
+    useState("Manager Agent");
 
-      return matchesSearch && matchesStatus;
-    });
-  }, [workflows, search, statusFilter]);
+  /* =========================
+     LOAD WORKFLOWS
+  ========================= */
 
-  const runningCount = workflows.filter(
-    (workflow) => workflow.status === "Running"
-  ).length;
+  const loadWorkflows = async () => {
+    try {
+      setLoading(true);
 
-  const totalRuns = workflows.reduce(
-    (total, workflow) => total + workflow.runs,
-    0
-  );
+      const response = await fetch(
+        `${API_URL}/workflows`
+      );
 
-  const successRate = useMemo(() => {
-    if (workflows.length === 0) return "0%";
+      if (!response.ok) {
+        throw new Error(
+          "Failed to load workflows"
+        );
+      }
 
-    const total = workflows.reduce(
-      (sum, workflow) =>
-        sum + Number(workflow.success.replace("%", "")),
-      0
-    );
+      const data: WorkflowApiItem[] =
+        await response.json();
 
-    return `${(total / workflows.length).toFixed(1)}%`;
-  }, [workflows]);
+      setWorkflows(data.map(mapWorkflow));
+    } catch (error) {
+      console.error(
+        "Workflow loading error:",
+        error
+      );
 
-  const openCreateModal = () => {
-    setEditingWorkflow(null);
-
-    setForm({
-      name: "",
-      description: "",
-      agent: "Manager Agent",
-      status: "Running",
-    });
-
-    setShowModal(true);
+      alert(
+        "Unable to load workflows. Please check the backend."
+      );
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const openEditModal = (workflow: WorkflowItem) => {
-    setEditingWorkflow(workflow);
+  useEffect(() => {
+    void loadWorkflows();
+  }, []);
 
-    setForm({
-      name: workflow.name,
-      description: workflow.description,
-      agent: workflow.agent,
-      status: workflow.status,
-    });
+  /* =========================
+     CHANGE WORKFLOW STATUS
+     
+     Running -> Paused
+     Paused -> Active
+     
+     IMPORTANT:
+     Both use PATCH /status.
+     We do NOT use /run for activation.
+  ========================= */
 
-    setShowModal(true);
+  const changeWorkflowStatus = async (
+    workflow: WorkflowItem
+  ) => {
+    try {
+      const nextStatus =
+        workflow.status === "Running"
+          ? "Paused"
+          : "Active";
+
+      const response = await fetch(
+        `${API_URL}/workflows/${workflow.id}/status`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            status: nextStatus,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+
+        console.error(
+          "Workflow status update failed:",
+          response.status,
+          errorText
+        );
+
+        throw new Error(
+          "Unable to change workflow status"
+        );
+      }
+
+      const updatedWorkflow: WorkflowApiItem =
+        await response.json();
+
+      const mappedWorkflow =
+        mapWorkflow(updatedWorkflow);
+
+      setWorkflows((current) =>
+        current.map((item) =>
+          item.id === mappedWorkflow.id
+            ? mappedWorkflow
+            : item
+        )
+      );
+
+      setSelectedWorkflow((current) =>
+        current &&
+        current.id === mappedWorkflow.id
+          ? mappedWorkflow
+          : current
+      );
+
+      setOpenMenuId(null);
+    } catch (error) {
+      console.error(
+        "Workflow status error:",
+        error
+      );
+
+      alert(
+        "Unable to change workflow status. Please check the backend."
+      );
+    }
   };
 
-  const saveWorkflow = () => {
-    if (!form.name.trim()) {
+  /* =========================
+     CREATE WORKFLOW
+  ========================= */
+
+  const createWorkflow = async () => {
+    if (!newName.trim()) {
       alert("Please enter workflow name.");
       return;
     }
 
-    if (!form.description.trim()) {
-      alert("Please enter workflow description.");
+    try {
+      const response = await fetch(
+        `${API_URL}/workflows`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: newName.trim(),
+            description:
+              newDescription.trim() ||
+              "AI-powered workspace automation workflow.",
+            agent: newAgent,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to create workflow"
+        );
+      }
+
+      const created: WorkflowApiItem =
+        await response.json();
+
+      setWorkflows((current) => [
+        ...current,
+        mapWorkflow(created),
+      ]);
+
+      setNewName("");
+      setNewDescription("");
+      setNewAgent("Manager Agent");
+      setShowCreateModal(false);
+    } catch (error) {
+      console.error(
+        "Create workflow error:",
+        error
+      );
+
+      alert(
+        "Unable to create workflow. Please check the backend."
+      );
+    }
+  };
+
+  /* =========================
+     OPEN EDIT
+  ========================= */
+
+  const openEditModal = (
+    workflow: WorkflowItem
+  ) => {
+    setEditingWorkflow(workflow);
+    setEditName(workflow.name);
+    setEditDescription(workflow.description);
+    setEditAgent(workflow.agent);
+
+    setShowEditModal(true);
+    setOpenMenuId(null);
+  };
+
+  /* =========================
+     UPDATE WORKFLOW
+  ========================= */
+
+  const updateWorkflow = async () => {
+    if (!editingWorkflow) {
       return;
     }
 
-    if (editingWorkflow) {
-      setWorkflows((current) =>
-        current.map((workflow) =>
-          workflow.id === editingWorkflow.id
-            ? {
-                ...workflow,
-                name: form.name,
-                description: form.description,
-                agent: form.agent,
-                status: form.status,
-              }
-            : workflow
-        )
-      );
-    } else {
-      const newWorkflow: WorkflowItem = {
-        id: Date.now(),
-        name: form.name,
-        description: form.description,
-        status: form.status,
-        runs: 0,
-        success: "100%",
-        agent: form.agent,
-        lastRun: "Not run yet",
-      };
-
-      setWorkflows((current) => [
-        newWorkflow,
-        ...current,
-      ]);
+    if (!editName.trim()) {
+      alert("Please enter workflow name.");
+      return;
     }
 
-    setShowModal(false);
+    try {
+      const response = await fetch(
+        `${API_URL}/workflows/${editingWorkflow.id}`,
+        {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: editName.trim(),
+            description:
+              editDescription.trim(),
+            agent: editAgent,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          "Failed to update workflow"
+        );
+      }
+
+      const updated: WorkflowApiItem =
+        await response.json();
+
+      const mappedWorkflow =
+        mapWorkflow(updated);
+
+      setWorkflows((current) =>
+        current.map((item) =>
+          item.id === mappedWorkflow.id
+            ? mappedWorkflow
+            : item
+        )
+      );
+
+      setSelectedWorkflow((current) =>
+        current &&
+        current.id === mappedWorkflow.id
+          ? mappedWorkflow
+          : current
+      );
+
+      setShowEditModal(false);
+      setEditingWorkflow(null);
+    } catch (error) {
+      console.error(
+        "Update workflow error:",
+        error
+      );
+
+      alert(
+        "Unable to update workflow. Please check the backend."
+      );
+    }
   };
 
-  const deleteWorkflow = (id: number) => {
+  /* =========================
+     DELETE WORKFLOW
+  ========================= */
+
+  const deleteWorkflow = async (
+    workflow: WorkflowItem
+  ) => {
     const confirmed = window.confirm(
-      "Are you sure you want to delete this workflow?"
+      `Delete "${workflow.name}"?`
     );
 
-    if (!confirmed) return;
+    if (!confirmed) {
+      return;
+    }
 
-    setWorkflows((current) =>
-      current.filter((workflow) => workflow.id !== id)
-    );
+    try {
+      const response = await fetch(
+        `${API_URL}/workflows/${workflow.id}`,
+        {
+          method: "DELETE",
+        }
+      );
 
-    setShowSettings(false);
-    setSelectedWorkflow(null);
+      if (!response.ok) {
+        throw new Error(
+          "Failed to delete workflow"
+        );
+      }
+
+      setWorkflows((current) =>
+        current.filter(
+          (item) => item.id !== workflow.id
+        )
+      );
+
+      if (
+        selectedWorkflow &&
+        selectedWorkflow.id === workflow.id
+      ) {
+        setSelectedWorkflow(null);
+      }
+
+      setShowSettingsModal(false);
+      setOpenMenuId(null);
+    } catch (error) {
+      console.error(
+        "Delete workflow error:",
+        error
+      );
+
+      alert(
+        "Unable to delete workflow. Please check the backend."
+      );
+    }
   };
 
-  const toggleWorkflow = (id: number) => {
-    setWorkflows((current) =>
-      current.map((workflow) =>
-        workflow.id === id
-          ? {
-              ...workflow,
-              status:
-                workflow.status === "Running"
-                  ? "Paused"
-                  : "Running",
-              lastRun:
-                workflow.status === "Running"
-                  ? workflow.lastRun
-                  : "Just now",
-            }
-          : workflow
-      )
-    );
-  };
+  /* =========================
+     ACTIVITY
+  ========================= */
 
-  const openActivity = (workflow: WorkflowItem) => {
+  const openActivity = (
+    workflow: WorkflowItem
+  ) => {
     setSelectedWorkflow(workflow);
-    setShowActivity(true);
+    setShowActivityModal(true);
+    setOpenMenuId(null);
   };
 
-  const openSettings = (workflow: WorkflowItem) => {
+  /* =========================
+     SETTINGS
+  ========================= */
+
+  const openSettings = (
+    workflow: WorkflowItem
+  ) => {
     setSelectedWorkflow(workflow);
-    setShowSettings(true);
+    setShowSettingsModal(true);
+    setOpenMenuId(null);
   };
+
+  /* =========================
+     FILTER
+  ========================= */
+
+  const filteredWorkflows = useMemo(() => {
+    return workflows.filter((workflow) => {
+      const searchText =
+        search.toLowerCase();
+
+      const matchesSearch =
+        workflow.name
+          .toLowerCase()
+          .includes(searchText) ||
+        workflow.description
+          .toLowerCase()
+          .includes(searchText) ||
+        workflow.agent
+          .toLowerCase()
+          .includes(searchText);
+
+      const matchesFilter =
+        filter === "All" ||
+        workflow.status === filter;
+
+      return (
+        matchesSearch &&
+        matchesFilter
+      );
+    });
+  }, [workflows, search, filter]);
+
+  /* =========================
+     SUMMARY
+  ========================= */
+
+  const totalWorkflows =
+    workflows.length;
+
+  const runningWorkflows =
+    workflows.filter(
+      (workflow) =>
+        workflow.status === "Running"
+    ).length;
+
+  const totalExecutions =
+    workflows.reduce(
+      (total, workflow) =>
+        total + workflow.runs,
+      0
+    );
+
+  const successRate =
+    workflows.length === 0
+      ? 0
+      : Math.round(
+          workflows.reduce(
+            (total, workflow) =>
+              total + workflow.success,
+            0
+          ) / workflows.length
+        );
 
   return (
     <div
-      className="min-h-[calc(100vh-80px)] p-8"
       style={{
-        backgroundColor: colors.background,
         color: colors.text,
+        minHeight: "100%",
       }}
     >
-      {/* HEADER */}
-      <div className="mb-7 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div
-            className="flex h-11 w-11 items-center justify-center rounded-xl"
+      {/* =========================
+          HEADER
+      ========================= */}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center",
+          marginBottom: 24,
+          gap: 16,
+          flexWrap: "wrap",
+        }}
+      >
+        <div>
+          <h1
             style={{
-              backgroundColor: colors.primary,
-              color: colors.black,
+              margin: 0,
+              fontSize: 28,
+              fontWeight: 700,
             }}
           >
-            <Workflow size={22} />
-          </div>
+            Workflows
+          </h1>
 
-          <div>
-            <h1 className="text-2xl font-bold">
-              Workflows
-            </h1>
-
-            <p
-              className="text-sm"
-              style={{
-                color: colors.textMuted,
-              }}
-            >
-              Automate tasks and manage intelligent workflows
-            </p>
-          </div>
+          <p
+            style={{
+              marginTop: 8,
+              marginBottom: 0,
+              color: colors.textMuted,
+              fontSize: 14,
+            }}
+          >
+            Automate your workspace with
+            AI-powered workflows
+          </p>
         </div>
 
         <button
-          onClick={openCreateModal}
-          className="flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-bold"
+          onClick={() =>
+            setShowCreateModal(true)
+          }
           style={{
-            backgroundColor: colors.primary,
-            color: colors.black,
+            display: "flex",
+            alignItems: "center",
+            gap: 8,
+            border: "none",
+            borderRadius: 10,
+            padding: "11px 16px",
+            background: colors.primary,
+            color: "#fff",
+            cursor: "pointer",
+            fontWeight: 600,
           }}
         >
           <Plus size={18} />
@@ -339,106 +592,71 @@ function Workflows({
         </button>
       </div>
 
-      {/* SUMMARY */}
-      <div className="mb-6 grid grid-cols-4 gap-4">
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }}
-        >
-          <p
-            className="text-xs"
-            style={{ color: colors.textMuted }}
-          >
-            Total Workflows
-          </p>
+      {/* =========================
+          SUMMARY CARDS
+      ========================= */}
 
-          <p className="mt-2 text-3xl font-bold">
-            {workflows.length}
-          </p>
-        </div>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(4, minmax(0, 1fr))",
+          gap: 16,
+          marginBottom: 22,
+        }}
+      >
+        <SummaryCard
+          title="Total Workflows"
+          value={totalWorkflows}
+          colors={colors}
+        />
 
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }}
-        >
-          <p
-            className="text-xs"
-            style={{ color: colors.textMuted }}
-          >
-            Running
-          </p>
+        <SummaryCard
+          title="Running"
+          value={runningWorkflows}
+          colors={colors}
+        />
 
-          <p
-            className="mt-2 text-3xl font-bold"
-            style={{ color: colors.primary }}
-          >
-            {runningCount}
-          </p>
-        </div>
+        <SummaryCard
+          title="Executions"
+          value={totalExecutions}
+          colors={colors}
+        />
 
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }}
-        >
-          <p
-            className="text-xs"
-            style={{ color: colors.textMuted }}
-          >
-            Executions
-          </p>
-
-          <p className="mt-2 text-3xl font-bold">
-            {totalRuns}
-          </p>
-        </div>
-
-        <div
-          className="rounded-2xl border p-5"
-          style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
-          }}
-        >
-          <p
-            className="text-xs"
-            style={{ color: colors.textMuted }}
-          >
-            Success Rate
-          </p>
-
-          <p className="mt-2 text-3xl font-bold">
-            {successRate}
-          </p>
-        </div>
+        <SummaryCard
+          title="Success Rate"
+          value={`${successRate}%`}
+          colors={colors}
+        />
       </div>
 
-      {/* SEARCH */}
+      {/* =========================
+          SEARCH + FILTERS
+      ========================= */}
+
       <div
-        className="mb-5 flex items-center justify-between rounded-2xl border p-4"
         style={{
-          backgroundColor: colors.surface,
-          borderColor: colors.border,
+          display: "flex",
+          gap: 12,
+          marginBottom: 22,
+          flexWrap: "wrap",
         }}
       >
         <div
-          className="flex w-80 items-center gap-2 rounded-xl border px-3 py-2.5"
           style={{
-            backgroundColor: colors.background,
-            borderColor: colors.border,
+            position: "relative",
+            flex: 1,
+            minWidth: 240,
           }}
         >
           <Search
-            size={17}
+            size={18}
             style={{
+              position: "absolute",
+              left: 14,
+              top: "50%",
+              transform:
+                "translateY(-50%)",
               color: colors.textMuted,
             }}
           />
@@ -446,743 +664,1413 @@ function Workflows({
           <input
             value={search}
             onChange={(event) =>
-              setSearch(event.target.value)
+              setSearch(
+                event.target.value
+              )
             }
             placeholder="Search workflows..."
-            className="flex-1 bg-transparent text-sm outline-none"
             style={{
+              width: "100%",
+              boxSizing: "border-box",
+              padding:
+                "13px 14px 13px 42px",
+              borderRadius: 12,
+              outline: "none",
+              background: colors.surface,
               color: colors.text,
+              border: `1px solid ${colors.border}`,
             }}
           />
         </div>
 
-        <div className="flex items-center gap-2">
-          {(["All", "Running", "Paused", "Completed"] as const).map(
-            (status) => (
-              <button
-                key={status}
-                onClick={() => setStatusFilter(status)}
-                className="rounded-lg px-3 py-2 text-xs font-semibold"
-                style={{
-                  backgroundColor:
-                    statusFilter === status
-                      ? colors.primary
-                      : colors.surfaceLight,
-                  color:
-                    statusFilter === status
-                      ? colors.black
-                      : colors.textMuted,
-                }}
-              >
-                {status}
-              </button>
-            )
-          )}
-
-          <div
-            className="ml-3 flex items-center gap-2 text-xs"
-            style={{
-              color: colors.textMuted,
-            }}
-          >
-            <Zap size={15} />
-            Automated workflows are active
-          </div>
+        <div
+          style={{
+            display: "flex",
+            gap: 8,
+            flexWrap: "wrap",
+          }}
+        >
+          {(
+            [
+              "All",
+              "Running",
+              "Paused",
+              "Completed",
+            ] as const
+          ).map((item) => (
+            <button
+              key={item}
+              onClick={() =>
+                setFilter(item)
+              }
+              style={{
+                padding: "10px 15px",
+                borderRadius: 9,
+                border: `1px solid ${
+                  filter === item
+                    ? colors.primary
+                    : colors.border
+                }`,
+                background:
+                  filter === item
+                    ? `${colors.primary}18`
+                    : colors.surface,
+                color:
+                  filter === item
+                    ? colors.primary
+                    : colors.textMuted,
+                cursor: "pointer",
+                fontWeight:
+                  filter === item
+                    ? 600
+                    : 500,
+              }}
+            >
+              {item}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* WORKFLOWS */}
-      {filteredWorkflows.length === 0 ? (
+      {/* =========================
+          WORKFLOW LIST
+      ========================= */}
+
+      {loading ? (
         <div
-          className="rounded-2xl border p-10 text-center"
           style={{
-            backgroundColor: colors.surface,
-            borderColor: colors.border,
+            padding: 40,
+            textAlign: "center",
+            color: colors.textMuted,
           }}
         >
-          <Workflow
-            size={40}
-            className="mx-auto mb-3"
-            style={{
-              color: colors.textMuted,
-            }}
-          />
-
-          <p className="font-semibold">
-            No workflows found
-          </p>
-
-          <p
-            className="mt-1 text-sm"
-            style={{
-              color: colors.textMuted,
-            }}
-          >
-            Try another search or create a new workflow.
-          </p>
+          Loading workflows...
+        </div>
+      ) : filteredWorkflows.length ===
+        0 ? (
+        <div
+          style={{
+            padding: 40,
+            textAlign: "center",
+            border: `1px solid ${colors.border}`,
+            borderRadius: 16,
+            color: colors.textMuted,
+          }}
+        >
+          No workflows found.
         </div>
       ) : (
-        <div className="grid grid-cols-2 gap-5">
-          {filteredWorkflows.map((workflow) => (
-            <div
-              key={workflow.id}
-              className="rounded-2xl border p-6"
-              style={{
-                backgroundColor: colors.surface,
-                borderColor: colors.border,
-              }}
-            >
-              {/* TOP */}
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div
-                    className="flex h-11 w-11 items-center justify-center rounded-xl"
-                    style={{
-                      backgroundColor:
-                        themeMode === "dark"
-                          ? "rgba(57,255,136,0.10)"
-                          : "rgba(22,163,74,0.10)",
-                    }}
-                  >
-                    <Workflow
-                      size={20}
-                      style={{
-                        color: colors.primary,
-                      }}
-                    />
-                  </div>
-
-                  <div>
-                    <h3 className="text-sm font-bold">
-                      {workflow.name}
-                    </h3>
-
-                    <p
-                      className="mt-1 text-[10px]"
-                      style={{
-                        color: colors.textMuted,
-                      }}
-                    >
-                      AI automated workflow
-                    </p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={() => openSettings(workflow)}
-                  className="rounded-lg p-2"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  <MoreHorizontal size={18} />
-                </button>
-              </div>
-
-              {/* STATUS */}
-              <div className="mt-5 flex items-center justify-between">
-                <span
-                  className="flex items-center gap-2 rounded-lg px-3 py-1.5 text-[10px] font-semibold"
-                  style={{
-                    backgroundColor:
-                      workflow.status === "Running"
-                        ? themeMode === "dark"
-                          ? "rgba(57,255,136,0.10)"
-                          : "rgba(22,163,74,0.10)"
-                        : colors.surfaceLight,
-                    color:
-                      workflow.status === "Running"
-                        ? colors.primary
-                        : colors.textMuted,
-                  }}
-                >
-                  {workflow.status === "Running" ? (
-                    <Play size={11} />
-                  ) : workflow.status === "Paused" ? (
-                    <Pause size={11} />
-                  ) : (
-                    <CheckCircle2 size={11} />
-                  )}
-
-                  {workflow.status}
-                </span>
-
-                <span
-                  className="flex items-center gap-1 text-[10px]"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  <Bot size={12} />
-                  {workflow.agent}
-                </span>
-              </div>
-
-              {/* DESCRIPTION */}
-              <p
-                className="mt-5 text-xs leading-5"
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(2, minmax(0, 1fr))",
+            gap: 18,
+          }}
+        >
+          {filteredWorkflows.map(
+            (workflow) => (
+              <div
+                key={workflow.id}
                 style={{
-                  color: colors.textSecondary,
+                  position: "relative",
+                  background:
+                    colors.surface,
+                  border: `1px solid ${colors.border}`,
+                  borderRadius: 16,
+                  padding: 28,
+                  minWidth: 0,
                 }}
               >
-                {workflow.description}
-              </p>
+                {/* CARD HEADER */}
 
-              {/* STATS */}
-              <div className="mt-5 grid grid-cols-3 gap-3">
                 <div
-                  className="rounded-xl p-3"
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems:
+                      "flex-start",
+                    gap: 12,
                   }}
                 >
-                  <p
-                    className="text-[9px]"
+                  <div
                     style={{
-                      color: colors.textMuted,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      gap: 13,
+                      minWidth: 0,
                     }}
                   >
-                    Runs
-                  </p>
+                    <div
+                      style={{
+                        width: 54,
+                        height: 54,
+                        borderRadius: 14,
+                        display: "flex",
+                        alignItems:
+                          "center",
+                        justifyContent:
+                          "center",
+                        background:
+                          `${colors.primary}18`,
+                        color:
+                          colors.primary,
+                        flexShrink: 0,
+                      }}
+                    >
+                      <Zap size={25} />
+                    </div>
 
-                  <p className="mt-1 text-base font-bold">
-                    {workflow.runs}
-                  </p>
+                    <div
+                      style={{
+                        minWidth: 0,
+                      }}
+                    >
+                      <h3
+                        style={{
+                          margin: 0,
+                          fontSize: 18,
+                          fontWeight: 700,
+                        }}
+                      >
+                        {workflow.name}
+                      </h3>
+
+                      <p
+                        style={{
+                          margin:
+                            "6px 0 0",
+                          color:
+                            colors.textMuted,
+                          fontSize: 13,
+                        }}
+                      >
+                        AI automated
+                        workflow
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* THREE DOTS */}
+
+                  <div
+                    style={{
+                      position:
+                        "relative",
+                    }}
+                  >
+                    <button
+                      onClick={() =>
+                        setOpenMenuId(
+                          openMenuId ===
+                            workflow.id
+                            ? null
+                            : workflow.id
+                        )
+                      }
+                      style={{
+                        border: "none",
+                        background:
+                          "transparent",
+                        color:
+                          colors.textMuted,
+                        cursor:
+                          "pointer",
+                        padding: 5,
+                      }}
+                    >
+                      <MoreHorizontal
+                        size={20}
+                      />
+                    </button>
+
+                    {openMenuId ===
+                      workflow.id && (
+                      <div
+                        style={{
+                          position:
+                            "absolute",
+                          right: 0,
+                          top: 35,
+                          zIndex: 20,
+                          width: 190,
+                          padding: 7,
+                          borderRadius: 10,
+                          background:
+                            colors.surface,
+                          border: `1px solid ${colors.border}`,
+                          boxShadow:
+                            "0 12px 30px rgba(0,0,0,0.25)",
+                        }}
+                      >
+                        <MenuButton
+                          icon={
+                            workflow.status ===
+                            "Running" ? (
+                              <Pause
+                                size={16}
+                              />
+                            ) : (
+                              <Play
+                                size={16}
+                              />
+                            )
+                          }
+                          label={
+                            workflow.status ===
+                            "Running"
+                              ? "Pause Workflow"
+                              : "Activate Workflow"
+                          }
+                          onClick={() =>
+                            void changeWorkflowStatus(
+                              workflow
+                            )
+                          }
+                          colors={colors}
+                        />
+
+                        <MenuButton
+                          icon={
+                            <Edit3
+                              size={16}
+                            />
+                          }
+                          label="Edit Workflow"
+                          onClick={() =>
+                            openEditModal(
+                              workflow
+                            )
+                          }
+                          colors={colors}
+                        />
+
+                        <MenuButton
+                          icon={
+                            <Settings
+                              size={16}
+                            />
+                          }
+                          label="Settings"
+                          onClick={() =>
+                            openSettings(
+                              workflow
+                            )
+                          }
+                          colors={colors}
+                        />
+
+                        <MenuButton
+                          icon={
+                            <Trash2
+                              size={16}
+                            />
+                          }
+                          label="Delete Workflow"
+                          onClick={() =>
+                            void deleteWorkflow(
+                              workflow
+                            )
+                          }
+                          colors={colors}
+                          danger
+                        />
+                      </div>
+                    )}
+                  </div>
                 </div>
 
+                {/* STATUS + AGENT */}
+
                 <div
-                  className="rounded-xl p-3"
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    display: "flex",
+                    justifyContent:
+                      "space-between",
+                    alignItems:
+                      "center",
+                    marginTop: 25,
+                    gap: 10,
                   }}
                 >
-                  <p
-                    className="text-[9px]"
+                  <div
                     style={{
-                      color: colors.textMuted,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      gap: 7,
+                      padding:
+                        "7px 11px",
+                      borderRadius: 8,
+                      background:
+                        workflow.status ===
+                        "Running"
+                          ? `${colors.primary}18`
+                          : "rgba(128,128,128,0.10)",
+                      color:
+                        workflow.status ===
+                        "Running"
+                          ? colors.primary
+                          : colors.textMuted,
+                      fontSize: 13,
+                      fontWeight: 600,
                     }}
                   >
-                    Success
-                  </p>
+                    {workflow.status ===
+                    "Running" ? (
+                      <Play size={14} />
+                    ) : (
+                      <Pause size={14} />
+                    )}
 
-                  <p
-                    className="mt-1 text-base font-bold"
+                    {workflow.status}
+                  </div>
+
+                  <div
                     style={{
-                      color: colors.primary,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      gap: 7,
+                      color:
+                        colors.textMuted,
+                      fontSize: 13,
                     }}
                   >
-                    {workflow.success}
-                  </p>
+                    <Zap size={15} />
+                    {workflow.agent}
+                  </div>
                 </div>
 
-                <div
-                  className="rounded-xl p-3"
+                {/* DESCRIPTION */}
+
+                <p
                   style={{
-                    backgroundColor: colors.surfaceLight,
+                    color:
+                      colors.textMuted,
+                    fontSize: 14,
+                    lineHeight: 1.6,
+                    minHeight: 45,
+                    margin:
+                      "20px 0 20px",
                   }}
                 >
-                  <p
-                    className="text-[9px]"
+                  {workflow.description}
+                </p>
+
+                {/* STATS */}
+
+                <div
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns:
+                      "repeat(3, 1fr)",
+                    gap: 10,
+                  }}
+                >
+                  <StatBox
+                    title="Runs"
+                    value={workflow.runs}
+                    colors={colors}
+                  />
+
+                  <StatBox
+                    title="Success"
+                    value={`${workflow.success}%`}
+                    success
+                    colors={colors}
+                  />
+
+                  <StatBox
+                    title="Last Run"
+                    value={
+                      workflow.lastRun
+                    }
+                    colors={colors}
+                  />
+                </div>
+
+                {/* ACTION BUTTONS */}
+
+                <div
+                  style={{
+                    display: "flex",
+                    gap: 10,
+                    marginTop: 20,
+                  }}
+                >
+                  <button
+                    onClick={() =>
+                      openActivity(
+                        workflow
+                      )
+                    }
                     style={{
-                      color: colors.textMuted,
+                      flex: 1,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      gap: 8,
+                      padding: 12,
+                      borderRadius: 10,
+                      border: `1px solid ${colors.border}`,
+                      background:
+                        "transparent",
+                      color:
+                        colors.text,
+                      cursor:
+                        "pointer",
+                      fontWeight: 600,
                     }}
                   >
-                    Last Run
-                  </p>
+                    <Activity
+                      size={17}
+                    />
+                    View Activity
+                  </button>
 
-                  <p className="mt-1 text-[11px] font-semibold">
-                    {workflow.lastRun}
-                  </p>
+                  {/* RUN / PAUSE */}
+
+                  <button
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+
+                      void changeWorkflowStatus(
+                        workflow
+                      );
+                    }}
+                    title={
+                      workflow.status ===
+                      "Running"
+                        ? "Pause workflow"
+                        : "Activate workflow"
+                    }
+                    style={{
+                      width: 52,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      borderRadius: 10,
+                      border: `1px solid ${colors.border}`,
+                      background:
+                        "transparent",
+                      color:
+                        workflow.status ===
+                        "Running"
+                          ? "#f59e0b"
+                          : colors.primary,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    {workflow.status ===
+                    "Running" ? (
+                      <Pause size={18} />
+                    ) : (
+                      <Play size={18} />
+                    )}
+                  </button>
+
+                  {/* EDIT */}
+
+                  <button
+                    onClick={() =>
+                      openEditModal(
+                        workflow
+                      )
+                    }
+                    title="Edit workflow"
+                    style={{
+                      width: 52,
+                      display: "flex",
+                      alignItems:
+                        "center",
+                      justifyContent:
+                        "center",
+                      borderRadius: 10,
+                      border: `1px solid ${colors.border}`,
+                      background:
+                        "transparent",
+                      color:
+                        colors.textMuted,
+                      cursor:
+                        "pointer",
+                    }}
+                  >
+                    <Edit3 size={18} />
+                  </button>
                 </div>
               </div>
-
-              {/* ACTIONS */}
-              <div className="mt-5 flex gap-2">
-                <button
-                  onClick={() => openActivity(workflow)}
-                  className="flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-xs font-semibold"
-                  style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.text,
-                  }}
-                >
-                  <Activity size={14} />
-                  View Activity
-                </button>
-
-                <button
-                  onClick={() => toggleWorkflow(workflow.id)}
-                  className="flex items-center justify-center rounded-xl px-4"
-                  style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.textMuted,
-                  }}
-                  title={
-                    workflow.status === "Running"
-                      ? "Pause workflow"
-                      : "Run workflow"
-                  }
-                >
-                  {workflow.status === "Running" ? (
-                    <Pause size={15} />
-                  ) : (
-                    <Power size={15} />
-                  )}
-                </button>
-
-                <button
-                  onClick={() => openEditModal(workflow)}
-                  className="flex items-center justify-center rounded-xl px-4"
-                  style={{
-                    backgroundColor: colors.surfaceLight,
-                    color: colors.textMuted,
-                  }}
-                  title="Edit workflow"
-                >
-                  <Pencil size={15} />
-                </button>
-              </div>
-            </div>
-          ))}
+            )
+          )}
         </div>
       )}
 
-      {/* CREATE / EDIT MODAL */}
-      {showModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            className="w-full max-w-lg rounded-2xl border p-6"
+      {/* =========================
+          CREATE MODAL
+      ========================= */}
+
+      {showCreateModal && (
+        <Modal
+          title="Create Workflow"
+          onClose={() =>
+            setShowCreateModal(
+              false
+            )
+          }
+          colors={colors}
+        >
+          <label style={labelStyle}>
+            Workflow Name
+          </label>
+
+          <input
+            value={newName}
+            onChange={(event) =>
+              setNewName(
+                event.target.value
+              )
+            }
+            placeholder="Enter workflow name"
+            style={modalInputStyle(colors)}
+          />
+
+          <label style={labelStyle}>
+            Description
+          </label>
+
+          <textarea
+            value={newDescription}
+            onChange={(event) =>
+              setNewDescription(
+                event.target.value
+              )
+            }
+            placeholder="Describe what this workflow does"
+            rows={4}
             style={{
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
+              ...modalInputStyle(colors),
+              resize: "vertical",
+            }}
+          />
+
+          <label style={labelStyle}>
+            AI Agent
+          </label>
+
+          <select
+            value={newAgent}
+            onChange={(event) =>
+              setNewAgent(
+                event.target.value
+              )
+            }
+            style={modalInputStyle(colors)}
+          >
+            <option>
+              Manager Agent
+            </option>
+            <option>
+              Research Agent
+            </option>
+            <option>
+              Document Agent
+            </option>
+            <option>
+              Workflow Agent
+            </option>
+            <option>
+              Meeting Agent
+            </option>
+            <option>
+              Analytics Agent
+            </option>
+          </select>
+
+          <div
+            style={{
+              display: "flex",
+              justifyContent:
+                "flex-end",
+              gap: 10,
+              marginTop: 24,
             }}
           >
-            <div className="mb-5 flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">
-                  {editingWorkflow
-                    ? "Edit Workflow"
-                    : "Create Workflow"}
-                </h2>
+            <button
+              onClick={() =>
+                setShowCreateModal(
+                  false
+                )
+              }
+              style={secondaryButton(
+                colors
+              )}
+            >
+              Cancel
+            </button>
 
-                <p
-                  className="mt-1 text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Configure your automated workflow.
-                </p>
-              </div>
+            <button
+              onClick={() =>
+                void createWorkflow()
+              }
+              style={primaryButton(
+                colors
+              )}
+            >
+              Create Workflow
+            </button>
+          </div>
+        </Modal>
+      )}
 
+      {/* =========================
+          EDIT MODAL
+      ========================= */}
+
+      {showEditModal &&
+        editingWorkflow && (
+          <Modal
+            title="Edit Workflow"
+            onClose={() =>
+              setShowEditModal(
+                false
+              )
+            }
+            colors={colors}
+          >
+            <label style={labelStyle}>
+              Workflow Name
+            </label>
+
+            <input
+              value={editName}
+              onChange={(event) =>
+                setEditName(
+                  event.target.value
+                )
+              }
+              style={modalInputStyle(
+                colors
+              )}
+            />
+
+            <label style={labelStyle}>
+              Description
+            </label>
+
+            <textarea
+              value={editDescription}
+              onChange={(event) =>
+                setEditDescription(
+                  event.target.value
+                )
+              }
+              rows={4}
+              style={{
+                ...modalInputStyle(
+                  colors
+                ),
+                resize: "vertical",
+              }}
+            />
+
+            <label style={labelStyle}>
+              AI Agent
+            </label>
+
+            <select
+              value={editAgent}
+              onChange={(event) =>
+                setEditAgent(
+                  event.target.value
+                )
+              }
+              style={modalInputStyle(
+                colors
+              )}
+            >
+              <option>
+                Manager Agent
+              </option>
+              <option>
+                Research Agent
+              </option>
+              <option>
+                Document Agent
+              </option>
+              <option>
+                Workflow Agent
+              </option>
+              <option>
+                Meeting Agent
+              </option>
+              <option>
+                Analytics Agent
+              </option>
+            </select>
+
+            <div
+              style={{
+                display: "flex",
+                justifyContent:
+                  "flex-end",
+                gap: 10,
+                marginTop: 24,
+              }}
+            >
               <button
-                onClick={() => setShowModal(false)}
-                style={{
-                  color: colors.textMuted,
-                }}
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label
-                  className="mb-1 block text-xs font-semibold"
-                  style={{
-                    color: colors.textSecondary,
-                  }}
-                >
-                  Workflow Name
-                </label>
-
-                <input
-                  value={form.name}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      name: event.target.value,
-                    })
-                  }
-                  placeholder="e.g. Invoice Processing"
-                  className="w-full rounded-xl border px-4 py-3 text-sm outline-none"
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                />
-              </div>
-
-              <div>
-                <label
-                  className="mb-1 block text-xs font-semibold"
-                  style={{
-                    color: colors.textSecondary,
-                  }}
-                >
-                  Description
-                </label>
-
-                <textarea
-                  value={form.description}
-                  onChange={(event) =>
-                    setForm({
-                      ...form,
-                      description: event.target.value,
-                    })
-                  }
-                  placeholder="Describe what this workflow should do..."
-                  rows={4}
-                  className="w-full resize-none rounded-xl border px-4 py-3 text-sm outline-none"
-                  style={{
-                    backgroundColor: colors.background,
-                    borderColor: colors.border,
-                    color: colors.text,
-                  }}
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label
-                    className="mb-1 block text-xs font-semibold"
-                    style={{
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    AI Agent
-                  </label>
-
-                  <select
-                    value={form.agent}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        agent: event.target.value,
-                      })
-                    }
-                    className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
-                    style={{
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
-                      color: colors.text,
-                    }}
-                  >
-                    <option>Manager Agent</option>
-                    <option>Document Agent</option>
-                    <option>Research Agent</option>
-                    <option>Meeting Agent</option>
-                    <option>Analytics Agent</option>
-                    <option>Workflow Agent</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    className="mb-1 block text-xs font-semibold"
-                    style={{
-                      color: colors.textSecondary,
-                    }}
-                  >
-                    Status
-                  </label>
-
-                  <select
-                    value={form.status}
-                    onChange={(event) =>
-                      setForm({
-                        ...form,
-                        status: event.target.value as WorkflowStatus,
-                      })
-                    }
-                    className="w-full rounded-xl border px-3 py-3 text-sm outline-none"
-                    style={{
-                      backgroundColor: colors.background,
-                      borderColor: colors.border,
-                      color: colors.text,
-                    }}
-                  >
-                    <option>Running</option>
-                    <option>Paused</option>
-                    <option>Completed</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 flex justify-end gap-2">
-              <button
-                onClick={() => setShowModal(false)}
-                className="rounded-xl px-4 py-2.5 text-xs font-semibold"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                  color: colors.textMuted,
-                }}
+                onClick={() =>
+                  setShowEditModal(
+                    false
+                  )
+                }
+                style={secondaryButton(
+                  colors
+                )}
               >
                 Cancel
               </button>
 
               <button
-                onClick={saveWorkflow}
-                className="rounded-xl px-5 py-2.5 text-xs font-bold"
-                style={{
-                  backgroundColor: colors.primary,
-                  color: colors.black,
-                }}
+                onClick={() =>
+                  void updateWorkflow()
+                }
+                style={primaryButton(
+                  colors
+                )}
               >
-                {editingWorkflow
-                  ? "Save Changes"
-                  : "Create Workflow"}
+                Save Changes
               </button>
             </div>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
 
-      {/* ACTIVITY MODAL */}
-      {showActivity && selectedWorkflow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            className="w-full max-w-md rounded-2xl border p-6"
-            style={{
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            }}
+      {/* =========================
+          ACTIVITY MODAL
+      ========================= */}
+
+      {showActivityModal &&
+        selectedWorkflow && (
+          <Modal
+            title="Workflow Activity"
+            onClose={() =>
+              setShowActivityModal(
+                false
+              )
+            }
+            colors={colors}
           >
-            <div className="flex items-start justify-between">
-              <div>
-                <h2 className="text-lg font-bold">
-                  Workflow Activity
-                </h2>
-
-                <p
-                  className="mt-1 text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  {selectedWorkflow.name}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowActivity(false)}
+            <div
+              style={{
+                display: "flex",
+                alignItems:
+                  "center",
+                gap: 12,
+                marginBottom: 20,
+              }}
+            >
+              <div
                 style={{
-                  color: colors.textMuted,
+                  width: 46,
+                  height: 46,
+                  borderRadius: 12,
+                  display: "flex",
+                  alignItems:
+                    "center",
+                  justifyContent:
+                    "center",
+                  background:
+                    `${colors.primary}18`,
+                  color:
+                    colors.primary,
                 }}
               >
-                <X size={20} />
-              </button>
+                <Activity size={22} />
+              </div>
+
+              <div>
+                <h3
+                  style={{
+                    margin: 0,
+                  }}
+                >
+                  {
+                    selectedWorkflow.name
+                  }
+                </h3>
+
+                <p
+                  style={{
+                    margin:
+                      "5px 0 0",
+                    color:
+                      colors.textMuted,
+                    fontSize: 13,
+                  }}
+                >
+                  {
+                    selectedWorkflow.agent
+                  }
+                </p>
+              </div>
             </div>
 
-            <div className="mt-5 space-y-3">
-              <div
-                className="rounded-xl p-4"
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns:
+                  "repeat(3, 1fr)",
+                gap: 10,
+              }}
+            >
+              <StatBox
+                title="Status"
+                value={
+                  selectedWorkflow.status
+                }
+                colors={colors}
+              />
+
+              <StatBox
+                title="Runs"
+                value={
+                  selectedWorkflow.runs
+                }
+                colors={colors}
+              />
+
+              <StatBox
+                title="Success"
+                value={`${selectedWorkflow.success}%`}
+                success
+                colors={colors}
+              />
+            </div>
+
+            <div
+              style={{
+                marginTop: 18,
+                padding: 15,
+                borderRadius: 10,
+                background:
+                  "rgba(128,128,128,0.08)",
+                color:
+                  colors.textMuted,
+                fontSize: 14,
+              }}
+            >
+              <strong
                 style={{
-                  backgroundColor: colors.surfaceLight,
+                  color:
+                    colors.text,
                 }}
               >
-                <p
-                  className="text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Current Status
-                </p>
-
-                <p className="mt-1 font-bold">
-                  {selectedWorkflow.status}
-                </p>
-              </div>
-
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
-                <p
-                  className="text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Total Runs
-                </p>
-
-                <p className="mt-1 font-bold">
-                  {selectedWorkflow.runs}
-                </p>
-              </div>
-
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
-                <p
-                  className="text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Success Rate
-                </p>
-
-                <p
-                  className="mt-1 font-bold"
-                  style={{
-                    color: colors.primary,
-                  }}
-                >
-                  {selectedWorkflow.success}
-                </p>
-              </div>
-
-              <div
-                className="rounded-xl p-4"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
-                <p
-                  className="text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  Last Run
-                </p>
-
-                <p className="mt-1 font-bold">
-                  {selectedWorkflow.lastRun}
-                </p>
-              </div>
+                Latest Activity:
+              </strong>{" "}
+              {
+                selectedWorkflow.lastRun
+              }
             </div>
 
             <button
-              onClick={() => {
-                toggleWorkflow(selectedWorkflow.id);
-
-                setSelectedWorkflow({
-                  ...selectedWorkflow,
-                  status:
-                    selectedWorkflow.status === "Running"
-                      ? "Paused"
-                      : "Running",
-                });
-              }}
-              className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-xs font-bold"
+              onClick={() =>
+                void changeWorkflowStatus(
+                  selectedWorkflow
+                )
+              }
               style={{
-                backgroundColor: colors.primary,
-                color: colors.black,
+                width: "100%",
+                marginTop: 20,
+                padding: 13,
+                borderRadius: 10,
+                border: "none",
+                background:
+                  selectedWorkflow.status ===
+                  "Running"
+                    ? "#f59e0b"
+                    : colors.primary,
+                color: "#fff",
+                cursor:
+                  "pointer",
+                fontWeight: 600,
               }}
             >
-              {selectedWorkflow.status === "Running" ? (
-                <>
-                  <Pause size={15} />
-                  Pause Workflow
-                </>
-              ) : (
-                <>
-                  <Power size={15} />
-                  Activate Workflow
-                </>
-              )}
+              {selectedWorkflow.status ===
+              "Running"
+                ? "Pause Workflow"
+                : "Activate Workflow"}
             </button>
-          </div>
-        </div>
-      )}
+          </Modal>
+        )}
 
-      {/* SETTINGS MODAL */}
-      {showSettings && selectedWorkflow && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <div
-            className="w-full max-w-sm rounded-2xl border p-6"
-            style={{
-              backgroundColor: colors.surface,
-              borderColor: colors.border,
-            }}
+      {/* =========================
+          SETTINGS MODAL
+      ========================= */}
+
+      {showSettingsModal &&
+        selectedWorkflow && (
+          <Modal
+            title="Workflow Settings"
+            onClose={() =>
+              setShowSettingsModal(
+                false
+              )
+            }
+            colors={colors}
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">
-                  Workflow Settings
-                </h2>
-
-                <p
-                  className="mt-1 text-xs"
-                  style={{
-                    color: colors.textMuted,
-                  }}
-                >
-                  {selectedWorkflow.name}
-                </p>
-              </div>
-
-              <button
-                onClick={() => setShowSettings(false)}
+            <div
+              style={{
+                marginBottom: 20,
+              }}
+            >
+              <h3
                 style={{
-                  color: colors.textMuted,
+                  margin: 0,
                 }}
               >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="mt-5 space-y-2">
-              <button
-                onClick={() => {
-                  openEditModal(selectedWorkflow);
-                  setShowSettings(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-sm font-semibold"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
-                <Pencil size={17} />
-                Edit Workflow
-              </button>
-
-              <button
-                onClick={() => {
-                  toggleWorkflow(selectedWorkflow.id);
-                  setShowSettings(false);
-                }}
-                className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-sm font-semibold"
-                style={{
-                  backgroundColor: colors.surfaceLight,
-                }}
-              >
-                <Power size={17} />
-                {selectedWorkflow.status === "Running"
-                  ? "Pause Workflow"
-                  : "Activate Workflow"}
-              </button>
-
-              <button
-                onClick={() =>
-                  deleteWorkflow(selectedWorkflow.id)
+                {
+                  selectedWorkflow.name
                 }
-                className="flex w-full items-center gap-3 rounded-xl p-3 text-left text-sm font-semibold"
+              </h3>
+
+              <p
                 style={{
-                  backgroundColor: colors.surfaceLight,
-                  color: "#EF4444",
+                  marginTop: 7,
+                  color:
+                    colors.textMuted,
+                  fontSize: 14,
                 }}
               >
-                <Trash2 size={17} />
-                Delete Workflow
-              </button>
+                {
+                  selectedWorkflow.description
+                }
+              </p>
             </div>
-          </div>
-        </div>
-      )}
+
+            <button
+              onClick={() =>
+                openEditModal(
+                  selectedWorkflow
+                )
+              }
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems:
+                  "center",
+                gap: 10,
+                padding: 13,
+                marginBottom: 10,
+                borderRadius: 10,
+                border: `1px solid ${colors.border}`,
+                background:
+                  "transparent",
+                color:
+                  colors.text,
+                cursor:
+                  "pointer",
+              }}
+            >
+              <Edit3 size={17} />
+              Edit Workflow
+            </button>
+
+            <button
+              onClick={() =>
+                void changeWorkflowStatus(
+                  selectedWorkflow
+                )
+              }
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems:
+                  "center",
+                gap: 10,
+                padding: 13,
+                marginBottom: 10,
+                borderRadius: 10,
+                border: `1px solid ${colors.border}`,
+                background:
+                  "transparent",
+                color:
+                  selectedWorkflow.status ===
+                  "Running"
+                    ? "#f59e0b"
+                    : colors.primary,
+                cursor:
+                  "pointer",
+              }}
+            >
+              {selectedWorkflow.status ===
+              "Running" ? (
+                <Pause size={17} />
+              ) : (
+                <Play size={17} />
+              )}
+
+              {selectedWorkflow.status ===
+              "Running"
+                ? "Pause Workflow"
+                : "Activate Workflow"}
+            </button>
+
+            <button
+              onClick={() =>
+                void deleteWorkflow(
+                  selectedWorkflow
+                )
+              }
+              style={{
+                width: "100%",
+                display: "flex",
+                alignItems:
+                  "center",
+                gap: 10,
+                padding: 13,
+                borderRadius: 10,
+                border:
+                  "1px solid rgba(239,68,68,0.3)",
+                background:
+                  "rgba(239,68,68,0.08)",
+                color: "#ef4444",
+                cursor:
+                  "pointer",
+              }}
+            >
+              <Trash2 size={17} />
+              Delete Workflow
+            </button>
+          </Modal>
+        )}
     </div>
   );
 }
 
-export default Workflows;
+/* =========================
+   SUMMARY CARD
+========================= */
+
+function SummaryCard({
+  title,
+  value,
+  colors,
+}: {
+  title: string;
+  value: string | number;
+  colors: typeof darkColors;
+}) {
+  return (
+    <div
+      style={{
+        background:
+          colors.surface,
+        border: `1px solid ${colors.border}`,
+        borderRadius: 14,
+        padding: 20,
+      }}
+    >
+      <div
+        style={{
+          color:
+            colors.textMuted,
+          fontSize: 13,
+          marginBottom: 9,
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          fontSize: 27,
+          fontWeight: 700,
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   STAT BOX
+========================= */
+
+function StatBox({
+  title,
+  value,
+  colors,
+  success = false,
+}: {
+  title: string;
+  value: string | number;
+  colors: typeof darkColors;
+  success?: boolean;
+}) {
+  return (
+    <div
+      style={{
+        background:
+          "rgba(128,128,128,0.06)",
+        borderRadius: 11,
+        padding: 14,
+        minWidth: 0,
+      }}
+    >
+      <div
+        style={{
+          color:
+            colors.textMuted,
+          fontSize: 11,
+          marginBottom: 8,
+        }}
+      >
+        {title}
+      </div>
+
+      <div
+        style={{
+          color: success
+            ? colors.primary
+            : colors.text,
+          fontSize: 15,
+          fontWeight: 700,
+          overflow: "hidden",
+          textOverflow:
+            "ellipsis",
+          whiteSpace:
+            "nowrap",
+        }}
+      >
+        {value}
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   MENU BUTTON
+========================= */
+
+function MenuButton({
+  icon,
+  label,
+  onClick,
+  colors,
+  danger = false,
+}: {
+  icon: ReactNode;
+  label: string;
+  onClick: () => void;
+  colors: typeof darkColors;
+  danger?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        width: "100%",
+        display: "flex",
+        alignItems:
+          "center",
+        gap: 9,
+        padding:
+          "9px 10px",
+        border: "none",
+        borderRadius: 7,
+        background:
+          "transparent",
+        color: danger
+          ? "#ef4444"
+          : colors.text,
+        cursor:
+          "pointer",
+        textAlign:
+          "left",
+        fontSize: 13,
+      }}
+    >
+      {icon}
+      {label}
+    </button>
+  );
+}
+
+/* =========================
+   MODAL
+========================= */
+
+function Modal({
+  title,
+  onClose,
+  colors,
+  children,
+}: {
+  title: string;
+  onClose: () => void;
+  colors: typeof darkColors;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      onClick={onClose}
+      style={{
+        position: "fixed",
+        inset: 0,
+        zIndex: 100,
+        display: "flex",
+        alignItems:
+          "center",
+        justifyContent:
+          "center",
+        padding: 20,
+        background:
+          "rgba(0,0,0,0.65)",
+      }}
+    >
+      <div
+        onClick={(event) =>
+          event.stopPropagation()
+        }
+        style={{
+          width: "100%",
+          maxWidth: 520,
+          maxHeight: "90vh",
+          overflowY:
+            "auto",
+          borderRadius: 16,
+          padding: 24,
+          background:
+            colors.surface,
+          color:
+            colors.text,
+          border: `1px solid ${colors.border}`,
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems:
+              "center",
+            justifyContent:
+              "space-between",
+            marginBottom: 22,
+          }}
+        >
+          <h2
+            style={{
+              margin: 0,
+              fontSize: 20,
+            }}
+          >
+            {title}
+          </h2>
+
+          <button
+            onClick={onClose}
+            style={{
+              border: "none",
+              background:
+                "transparent",
+              color:
+                colors.textMuted,
+              cursor:
+                "pointer",
+            }}
+          >
+            <X size={20} />
+          </button>
+        </div>
+
+        {children}
+      </div>
+    </div>
+  );
+}
+
+/* =========================
+   LABEL
+========================= */
+
+const labelStyle = {
+  display: "block",
+  fontSize: 13,
+  fontWeight: 600,
+  marginBottom: 8,
+  marginTop: 16,
+};
+
+/* =========================
+   MODAL INPUT
+========================= */
+
+function modalInputStyle(
+  colors: typeof darkColors
+) {
+  return {
+    width: "100%",
+    boxSizing:
+      "border-box" as const,
+    padding:
+      "12px 13px",
+    borderRadius: 9,
+    outline: "none",
+    background:
+      colors.background,
+    color:
+      colors.text,
+    border: `1px solid ${colors.border}`,
+    fontSize: 14,
+  };
+}
+
+/* =========================
+   PRIMARY BUTTON
+========================= */
+
+function primaryButton(
+  colors: typeof darkColors
+) {
+  return {
+    padding:
+      "11px 17px",
+    borderRadius: 9,
+    border: "none",
+    background:
+      colors.primary,
+    color: "#fff",
+    cursor:
+      "pointer",
+    fontWeight: 600,
+  };
+}
+
+/* =========================
+   SECONDARY BUTTON
+========================= */
+
+function secondaryButton(
+  colors: typeof darkColors
+) {
+  return {
+    padding:
+      "11px 17px",
+    borderRadius: 9,
+    border: `1px solid ${colors.border}`,
+    background:
+      "transparent",
+    color:
+      colors.text,
+    cursor:
+      "pointer",
+    fontWeight: 600,
+  };
+}
