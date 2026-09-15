@@ -196,155 +196,196 @@ function AIAssistant({ colors }: Props) {
     return response.json();
   };
 
+ 
+ 
   /* =========================================================
-     COMPLETE BACKEND TASK
-  ========================================================= */
+   PROCESS COMMAND
+========================================================= */
 
-  const completeBackendTask = async (
-    taskId: number,
-    result: string
-  ) => {
-    const response = await fetch(
-      `${AI_ASSISTANT_URL}/tasks/${taskId}/complete`,
-      {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          result,
-        }),
-      }
-    );
+const processCommand = async (
+  value: string
+) => {
+  const cleanCommand = value.trim();
 
-    if (!response.ok) {
+  if (!cleanCommand) {
+    return;
+  }
+
+  setStatus("THINKING");
+
+  setCurrentTask(
+    "Understanding your command..."
+  );
+
+  setReport("");
+
+  await new Promise((resolve) =>
+    setTimeout(resolve, 700)
+  );
+
+  let taskId: number | null = null;
+  let agent = "Manager Agent";
+
+  try {
+    const backendResponse =
+      await callAIAssistant(
+        cleanCommand
+      );
+
+    const backendTask =
+      backendResponse.task;
+
+    if (!backendTask) {
       throw new Error(
-        `Task completion returned ${response.status}`
+        "Backend did not return a task."
       );
     }
 
-    return response.json();
-  };
+    taskId = backendTask.id;
+    agent = backendTask.agent;
 
-  /* =========================================================
-     PROCESS COMMAND
-  ========================================================= */
+    const priority =
+      backendTask.priority === "High"
+        ? "High"
+        : backendTask.priority === "Low"
+        ? "Low"
+        : "Medium";
 
-  const processCommand = async (
-    value: string
-  ) => {
-    const cleanCommand = value.trim();
+    const newTask: WorkerTask = {
+id: backendTask.id,
+      agent,
+      task: cleanCommand,
+      priority,
+      status:
+        backendTask.status === "Failed"
+          ? "Failed"
+          : backendTask.status === "Completed"
+          ? "Completed"
+          : "Working",
+    };
 
-    if (!cleanCommand) {
-      return;
-    }
+    setTasks((oldTasks) => [
+      newTask,
+      ...oldTasks,
+    ]);
 
-    setStatus("THINKING");
-
-    setCurrentTask(
-      "Understanding your command..."
-    );
-
-    setReport("");
-
-    await new Promise((resolve) =>
-      setTimeout(resolve, 700)
-    );
-
-    try {
-      /* -------------------------------------------------------
-         SEND COMMAND TO NESTJS BACKEND
-      ------------------------------------------------------- */
-
-      const backendResponse =
-        await callAIAssistant(
-          cleanCommand
-        );
-
-      const backendTask =
-        backendResponse.task;
-
-      if (!backendTask) {
-        throw new Error(
-          "Backend did not return a task."
-        );
-      }
-
-      const taskId =
-        backendTask.id;
-
-      const agent =
-        backendTask.agent;
-
-      const priority =
-        backendTask.priority ===
-        "High"
-          ? "High"
-          : backendTask.priority ===
-            "Low"
-          ? "Low"
-          : "Medium";
-
-      const newTask: WorkerTask = {
-        id: taskId,
-        agent,
-        task: cleanCommand,
-        priority,
-        status: "Working",
-      };
-
-      setTasks((oldTasks) => [
-        newTask,
-        ...oldTasks,
-      ]);
-
-      setStatus("WORKING");
+    if (
+      backendTask.status === "Failed" ||
+      backendResponse.success === false
+    ) {
+      setStatus("ERROR");
 
       setCurrentTask(
-        `${agent} is working on your request.`
+        `${agent} could not complete your request.`
       );
 
       notifyVirtualOffice(
         agent,
         cleanCommand,
-        "Working"
+        "Failed"
+      );
+
+      setReport(
+        backendTask.result ||
+          `${agent} was unable to complete the task. Please try again.`
       );
 
       speak(
-        `Understood. I am assigning this task to ${agent}.`
+        `${agent} could not complete the task.`
       );
 
-      /* -------------------------------------------------------
-         CURRENT BACKEND CAPABILITY
-         
-         Backend currently creates and stores the task.
-         Actual AI agent execution will be connected later.
-      ------------------------------------------------------- */
+      return;
+    }
 
-      const result =
-        `${agent} has received the task and it is now stored in the AI Assistant backend.\n\n` +
-        `Task:\n${cleanCommand}\n\n` +
-        `Status:\nTask successfully assigned and saved in the database.`;
+    setStatus("WORKING");
 
-      /* -------------------------------------------------------
-         MARK BACKEND TASK COMPLETED
-         
-         This keeps the current frontend workflow working
-         until actual agent execution APIs are added.
-      ------------------------------------------------------- */
+    setCurrentTask(
+      `${agent} is processing your request...`
+    );
 
-      await completeBackendTask(
-        taskId,
-        result
+    notifyVirtualOffice(
+      agent,
+      cleanCommand,
+      "Working"
+    );
+
+    speak(
+      `Understood. I am assigning this task to ${agent}.`
+    );
+
+    const result =
+      backendTask.result?.trim();
+
+    if (!result) {
+      throw new Error(
+        "Backend completed the task but returned no AI result."
       );
+    }
 
+    setTasks((oldTasks) =>
+      oldTasks.map((item) =>
+        item.id === taskId
+          ? {
+              ...item,
+              status: "Completed",
+              result,
+            }
+          : item
+      )
+    );
+
+    notifyVirtualOffice(
+      agent,
+      cleanCommand,
+      "Completed"
+    );
+
+    const finalReport =
+      `${agent} has completed the assigned task.\n\n` +
+      result;
+
+    setStatus("REPORTING");
+
+    setCurrentTask(
+      "Task completed successfully."
+    );
+
+    setReport(finalReport);
+
+    speak(
+      `${agent} has completed the task.`
+    );
+
+    setTimeout(() => {
+      if (
+        isListeningRef.current
+      ) {
+        setStatus("LISTENING");
+
+        setCurrentTask(
+          "I'm listening for your next command..."
+        );
+      } else {
+        setStatus("IDLE");
+
+        setCurrentTask(
+          "Waiting for your next command..."
+        );
+      }
+    }, 2500);
+  } catch (error) {
+    console.error(
+      "AI Agent Error:",
+      error
+    );
+
+    if (taskId !== null) {
       setTasks((oldTasks) =>
         oldTasks.map((item) =>
           item.id === taskId
             ? {
                 ...item,
-                status: "Completed",
-                result,
+                status: "Failed",
               }
             : item
         )
@@ -353,61 +394,28 @@ function AIAssistant({ colors }: Props) {
       notifyVirtualOffice(
         agent,
         cleanCommand,
-        "Completed"
-      );
-
-      const finalReport =
-        `${agent} has completed the assigned task.\n\n` +
-        result;
-
-      setStatus("REPORTING");
-
-      setCurrentTask(
-        "Task completed successfully."
-      );
-
-      setReport(finalReport);
-
-      speak(
-        `${agent} has completed the task.`
-      );
-
-      setTimeout(() => {
-        if (isListeningRef.current) {
-          setStatus("LISTENING");
-
-          setCurrentTask(
-            "I'm listening for your next command..."
-          );
-        } else {
-          setStatus("IDLE");
-
-          setCurrentTask(
-            "Waiting for your next command..."
-          );
-        }
-      }, 2500);
-    } catch (error) {
-      console.error(
-        "AI Assistant Error:",
-        error
-      );
-
-      setStatus("ERROR");
-
-      setCurrentTask(
-        "The AI Assistant could not process the request."
-      );
-
-      setReport(
-        "The backend AI Assistant API could not process this command. Please make sure the NestJS backend is running."
-      );
-
-      speak(
-        "I could not process the task."
+        "Failed"
       );
     }
-  };
+
+    setStatus("ERROR");
+
+    setCurrentTask(
+      "The assigned employee could not complete the task."
+    );
+
+    setReport(
+      error instanceof Error
+        ? error.message
+        : `${agent} was unable to complete the task. Please try again.`
+    );
+
+    speak(
+      `${agent} could not complete the task.`
+    );
+  }
+};
+
 
   /* =========================================================
      VOICE START
