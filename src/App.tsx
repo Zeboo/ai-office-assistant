@@ -55,7 +55,7 @@ const [notifications, setNotifications] = useState<
 >([]);
 
 useEffect(() => {
-  fetch("http://localhost:3000/notifications")
+  fetch("https://ai-virtual-office-backend.onrender.com/notifications")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load notifications");
@@ -99,7 +99,7 @@ useEffect(() => {
   const loadDashboardStats = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/dashboard/stats"
+        "https://ai-virtual-office-backend.onrender.com/dashboard/stats"
       );
 
       if (!response.ok) {
@@ -139,7 +139,7 @@ const [schedule, setSchedule] = useState<
 >([]);
 
 useEffect(() => {
-  fetch("http://localhost:3000/calendar/schedule")
+  fetch("https://ai-virtual-office-backend.onrender.com/calendar/schedule")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load schedule");
@@ -192,7 +192,7 @@ const [growthPoints, setGrowthPoints] = useState({
 });
 
 useEffect(() => {
-  fetch("http://localhost:3000/productivity/growth")
+  fetch("https://ai-virtual-office-backend.onrender.com/productivity/growth")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load growth points");
@@ -220,7 +220,7 @@ const [activeGoals, setActiveGoals] = useState<
 >([]);
 
 useEffect(() => {
-  fetch("http://localhost:3000/goals/active")
+  fetch("https://ai-virtual-office-backend.onrender.com/goals/active")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load active goals");
@@ -248,7 +248,7 @@ const [recentActivity, setRecentActivity] = useState<
 >([]);
 
 useEffect(() => {
-  fetch("http://localhost:3000/activity/recent")
+  fetch("https://ai-virtual-office-backend.onrender.com/activity/recent")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load recent activity");
@@ -269,7 +269,7 @@ useEffect(() => {
 
 
 useEffect(() => {
-  fetch("http://localhost:3000/notifications")
+  fetch("https://ai-virtual-office-backend.onrender.com/notifications")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load notifications");
@@ -617,7 +617,7 @@ const openCopilot = () => {
 onClick={async () => {
   try {
     const response = await fetch(
-      "http://localhost:3000/notifications/read-all",
+      "https://ai-virtual-office-backend.onrender.com/notifications/read-all",
       {
         method: "PATCH",
       }

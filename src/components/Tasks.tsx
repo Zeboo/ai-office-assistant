@@ -51,7 +51,7 @@ function Tasks({ themeMode }: TasksProps) {
  const [tasks, setTasks] = useState<Task[]>([]);
 
 useEffect(() => {
-  fetch("http://localhost:3000/tasks")
+  fetch("https://ai-virtual-office-backend.onrender.com/tasks")
     .then((response) => {
       if (!response.ok) {
         throw new Error("Failed to load tasks");
@@ -150,7 +150,7 @@ useEffect(() => {
 
   try {
     const response = await fetch(
-      `http://localhost:3000/tasks/${id}`,
+      `https://ai-virtual-office-backend.onrender.com/tasks/${id}`,
       {
         method: "PATCH",
         headers: {
@@ -193,7 +193,7 @@ useEffect(() => {
   const deleteTask = async (id: number) => {
   try {
     const response = await fetch(
-      `http://localhost:3000/tasks/${id}`,
+      `https://ai-virtual-office-backend.onrender.com/tasks/${id}`,
       {
         method: "DELETE",
       }
@@ -222,7 +222,7 @@ useEffect(() => {
 
   try {
     const response = await fetch(
-      "http://localhost:3000/tasks",
+      "https://ai-virtual-office-backend.onrender.com/tasks",
       {
         method: "POST",
         headers: {

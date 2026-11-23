@@ -79,7 +79,7 @@ function Settings({
     const loadSettings = async () => {
       try {
         const response = await fetch(
-          "http://localhost:3000/settings",
+          "https://ai-virtual-office-backend.onrender.com/settings",
         );
 
         if (!response.ok) {
@@ -170,7 +170,7 @@ function Settings({
   const saveSettings = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3000/settings",
+        "https://ai-virtual-office-backend.onrender.com/settings",
         {
           method: "PUT",
           headers: {

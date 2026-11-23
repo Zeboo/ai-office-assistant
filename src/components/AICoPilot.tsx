@@ -77,7 +77,7 @@ function AICopilot({
 
   try {
     const response = await fetch(
-      "http://localhost:3000/copilot/command",
+      "https://ai-virtual-office-backend.onrender.com/copilot/command",
       {
         method: "POST",
         headers: {
